@@ -58,4 +58,9 @@ public interface IBizRegistrationService
      * @return 结果
      */
     public int deleteBizRegistrationByRegId(Long regId);
+
+
+    public List<java.util.Map<String, Object>> selectDeptStats();
+
+    public List<java.util.Map<String, Object>> selectActivityStats();
 }

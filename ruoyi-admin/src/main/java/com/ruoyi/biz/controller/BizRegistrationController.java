@@ -2,6 +2,7 @@ package com.ruoyi.biz.controller;
 
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,14 +24,13 @@ import com.ruoyi.common.core.page.TableDataInfo;
 
 /**
  * 报名记录Controller
- * 
+ *
  * @author ruoyi
  * @date 2025-12-17
  */
 @RestController
 @RequestMapping("/activity/register")
-public class BizRegistrationController extends BaseController
-{
+public class BizRegistrationController extends BaseController {
     @Autowired
     private IBizRegistrationService bizRegistrationService;
 
@@ -39,8 +39,7 @@ public class BizRegistrationController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('activity:register:list')")
     @GetMapping("/list")
-    public TableDataInfo list(BizRegistration bizRegistration)
-    {
+    public TableDataInfo list(BizRegistration bizRegistration) {
         startPage();
         List<BizRegistration> list = bizRegistrationService.selectBizRegistrationList(bizRegistration);
         return getDataTable(list);
@@ -52,8 +51,7 @@ public class BizRegistrationController extends BaseController
     @PreAuthorize("@ss.hasPermi('activity:register:export')")
     @Log(title = "报名记录", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(HttpServletResponse response, BizRegistration bizRegistration)
-    {
+    public void export(HttpServletResponse response, BizRegistration bizRegistration) {
         List<BizRegistration> list = bizRegistrationService.selectBizRegistrationList(bizRegistration);
         ExcelUtil<BizRegistration> util = new ExcelUtil<BizRegistration>(BizRegistration.class);
         util.exportExcel(response, list, "报名记录数据");
@@ -64,8 +62,7 @@ public class BizRegistrationController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('activity:register:query')")
     @GetMapping(value = "/{regId}")
-    public AjaxResult getInfo(@PathVariable("regId") Long regId)
-    {
+    public AjaxResult getInfo(@PathVariable("regId") Long regId) {
         return success(bizRegistrationService.selectBizRegistrationByRegId(regId));
     }
 
@@ -75,8 +72,7 @@ public class BizRegistrationController extends BaseController
     @PreAuthorize("@ss.hasPermi('activity:register:add')")
     @Log(title = "报名记录", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@RequestBody BizRegistration bizRegistration)
-    {
+    public AjaxResult add(@RequestBody BizRegistration bizRegistration) {
         return toAjax(bizRegistrationService.insertBizRegistration(bizRegistration));
     }
 
@@ -86,8 +82,7 @@ public class BizRegistrationController extends BaseController
     @PreAuthorize("@ss.hasPermi('activity:register:edit')")
     @Log(title = "报名记录", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@RequestBody BizRegistration bizRegistration)
-    {
+    public AjaxResult edit(@RequestBody BizRegistration bizRegistration) {
         return toAjax(bizRegistrationService.updateBizRegistration(bizRegistration));
     }
 
@@ -96,9 +91,21 @@ public class BizRegistrationController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('activity:register:remove')")
     @Log(title = "报名记录", businessType = BusinessType.DELETE)
-	@DeleteMapping("/{regIds}")
-    public AjaxResult remove(@PathVariable Long[] regIds)
-    {
+    @DeleteMapping("/{regIds}")
+    public AjaxResult remove(@PathVariable Long[] regIds) {
         return toAjax(bizRegistrationService.deleteBizRegistrationByRegIds(regIds));
     }
+
+
+    /**
+     * 获取数据大屏统计信息
+     */
+    @GetMapping("/stats")
+    public AjaxResult getStats() {
+        AjaxResult ajax = AjaxResult.success();
+        ajax.put("deptStats", bizRegistrationService.selectDeptStats());
+        ajax.put("activityStats", bizRegistrationService.selectActivityStats());
+        return ajax;
+    }
+
 }

@@ -58,4 +58,6 @@ public interface IBizActivityService
      * @return 结果
      */
     public int deleteBizActivityByActivityId(Long activityId);
+
+
 }

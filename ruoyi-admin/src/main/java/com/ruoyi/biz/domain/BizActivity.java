@@ -1,20 +1,19 @@
 package com.ruoyi.biz.domain;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.annotation.Excel;
 import com.ruoyi.common.core.domain.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import java.util.Date;
 
 /**
- * 学术讲座活动对象 biz_activity
- * @author ruoyi
+ * 活动对象 biz_activity
  */
 @Data
-@EqualsAndHashCode(callSuper = true) // 包含父类字段
+@EqualsAndHashCode(callSuper = true)
 public class BizActivity extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
@@ -22,52 +21,52 @@ public class BizActivity extends BaseEntity
     /** 活动ID */
     private Long activityId;
 
-    /** 活动主题 */
-    @Excel(name = "活动主题")
-    @NotBlank(message = "活动主题不能为空") // 现代化的校验方式
+    /** 活动标题 */
+    @Excel(name = "活动标题")
     private String title;
+
+    /** 活动描述 */
+    @Excel(name = "活动描述")
+    private String description;
 
     /** 主讲人 */
     @Excel(name = "主讲人")
-    @NotBlank(message = "主讲人不能为空")
     private String speaker;
+
+    /** 主讲人简介 (你报错就是因为缺这个) */
+    @Excel(name = "主讲人简介")
+    private String speakerInfo;
 
     /** 地点 */
     @Excel(name = "地点")
-    @NotBlank(message = "活动地点不能为空")
     private String location;
 
     /** 开始时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Excel(name = "开始时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
-    @NotNull(message = "开始时间不能为空")
     private Date startTime;
 
     /** 结束时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Excel(name = "结束时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date endTime;
 
-    /** 内容详情 */
-    @Excel(name = "内容详情")
-    private String description;
+    /** 最大人数 */
+    @Excel(name = "最大人数")
+    private Long maxPeople;
 
-    /** 状态（0正常 1关闭） */
-    @Excel(name = "状态", readConverterExp = "0=正常,1=关闭")
+    /** 状态 (0正常 1关闭) */
+    @Excel(name = "状态")
     private String status;
 
-    /** 删除标志（0存在 2删除） */
-    private String delFlag;
-
-    // --- 以下是你新增的高级字段 ---
-
-    /** 最大人数限制（0为不限） */
-    @Excel(name = "最大人数")
-    @Min(value = 0, message = "人数限制不能小于0")
-    private Integer maxPeople;
-
-    /** 签到验证码 */
-    private String checkinCode;
-
-    /** 审核状态（0待审核 1已通过 2拒绝） */
-    @Excel(name = "审核状态", readConverterExp = "0=待审核,1=已通过,2=拒绝")
+    /** 审核状态 (0待审核 1通过 2拒绝) */
+    @Excel(name = "审核状态")
     private String auditStatus;
+
+    /** 部门ID */
+    private Long deptId;
+
+    /** 签到码 */
+    @Excel(name = "签到码")
+    private String checkinCode;
 }

@@ -1,7 +1,8 @@
-package com.ruoyi.biz.controller;
+package com.ruoyi.biz.controller; // 或者是 package com.ruoyi.biz.controller; 取决于你的目录
 
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,83 +23,58 @@ import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
 
 /**
- * 学术讲座Controller
- * 
- * @author ruoyi
- * @date 2025-12-17
+ * 活动管理 Controller
  */
 @RestController
-@RequestMapping("/activity/lecture")
-public class BizActivityController extends BaseController
-{
+// 关键点：这里的路径必须和前端 api.js 里的 url 对应
+@RequestMapping("/biz/activity")
+public class BizActivityController extends BaseController {
     @Autowired
     private IBizActivityService bizActivityService;
 
     /**
-     * 查询学术讲座列表
+     * 查询活动列表
      */
-    @PreAuthorize("@ss.hasPermi('activity:lecture:list')")
+    // @PreAuthorize("@ss.hasPermi('biz:activity:list')") // 如果你配置了权限字符，可以开启这个
     @GetMapping("/list")
-    public TableDataInfo list(BizActivity bizActivity)
-    {
+    public TableDataInfo list(BizActivity bizActivity) {
         startPage();
         List<BizActivity> list = bizActivityService.selectBizActivityList(bizActivity);
         return getDataTable(list);
     }
 
     /**
-     * 导出学术讲座列表
+     * 获取活动详细信息
      */
-    @PreAuthorize("@ss.hasPermi('activity:lecture:export')")
-    @Log(title = "学术讲座", businessType = BusinessType.EXPORT)
-    @PostMapping("/export")
-    public void export(HttpServletResponse response, BizActivity bizActivity)
-    {
-        List<BizActivity> list = bizActivityService.selectBizActivityList(bizActivity);
-        ExcelUtil<BizActivity> util = new ExcelUtil<BizActivity>(BizActivity.class);
-        util.exportExcel(response, list, "学术讲座数据");
-    }
-
-    /**
-     * 获取学术讲座详细信息
-     */
-    @PreAuthorize("@ss.hasPermi('activity:lecture:query')")
     @GetMapping(value = "/{activityId}")
-    public AjaxResult getInfo(@PathVariable("activityId") Long activityId)
-    {
-        return success(bizActivityService.selectBizActivityByActivityId(activityId));
+    public AjaxResult getInfo(@PathVariable("activityId") Long activityId) {
+        return AjaxResult.success(bizActivityService.selectBizActivityByActivityId(activityId));
     }
 
     /**
-     * 新增学术讲座
+     * 新增活动
      */
-    @PreAuthorize("@ss.hasPermi('activity:lecture:add')")
-    @Log(title = "学术讲座", businessType = BusinessType.INSERT)
+    @Log(title = "活动管理", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@RequestBody BizActivity bizActivity)
-    {
+    public AjaxResult add(@RequestBody BizActivity bizActivity) {
         return toAjax(bizActivityService.insertBizActivity(bizActivity));
     }
 
     /**
-     * 修改学术讲座
+     * 修改活动
      */
-    @PreAuthorize("@ss.hasPermi('activity:lecture:edit')")
-    @Log(title = "学术讲座", businessType = BusinessType.UPDATE)
+    @Log(title = "活动管理", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@RequestBody BizActivity bizActivity)
-    {
+    public AjaxResult edit(@RequestBody BizActivity bizActivity) {
         return toAjax(bizActivityService.updateBizActivity(bizActivity));
     }
 
     /**
-     * 删除学术讲座
+     * 删除活动
      */
-    @PreAuthorize("@ss.hasPermi('activity:lecture:remove')")
-    @Log(title = "学术讲座", businessType = BusinessType.DELETE)
-	@DeleteMapping("/{activityIds}")
-    public AjaxResult remove(@PathVariable Long[] activityIds)
-    {
+    @Log(title = "活动管理", businessType = BusinessType.DELETE)
+    @DeleteMapping("/{activityIds}")
+    public AjaxResult remove(@PathVariable Long[] activityIds) {
         return toAjax(bizActivityService.deleteBizActivityByActivityIds(activityIds));
     }
 }

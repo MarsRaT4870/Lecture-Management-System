@@ -1,6 +1,8 @@
 package com.ruoyi.biz.service.impl;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
 import com.ruoyi.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,16 +46,22 @@ public class BizActivityServiceImpl implements IBizActivityService
         return bizActivityMapper.selectBizActivityList(bizActivity);
     }
 
+
     /**
      * 新增学术讲座
-     * 
-     * @param bizActivity 学术讲座
-     * @return 结果
      */
     @Override
     public int insertBizActivity(BizActivity bizActivity)
     {
         bizActivity.setCreateTime(DateUtils.getNowDate());
+
+        // --- 新增逻辑：如果前端没传签到码，系统自动生成一个6位数字码 ---
+        if (bizActivity.getCheckinCode() == null || bizActivity.getCheckinCode().isEmpty()) {
+            // 生成 100000 - 999999 之间的随机数
+            int code = ThreadLocalRandom.current().nextInt(100000, 999999);
+            bizActivity.setCheckinCode(String.valueOf(code));
+        }
+
         return bizActivityMapper.insertBizActivity(bizActivity);
     }
 

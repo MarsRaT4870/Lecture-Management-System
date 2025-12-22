@@ -47,10 +47,14 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService
     @Override
     public List<BizRegistration> selectBizRegistrationList(BizRegistration bizRegistration)
     {
-        // 如果是普通用户（学生），只允许查看自己的报名记录
-        if (!SecurityUtils.isAdmin()) {
-            bizRegistration.setUserId(SecurityUtils.getUserId());
+        // 获取当前用户ID
+        Long userId = SecurityUtils.getUserId();
+
+        // 修复点：isAdmin 需要传入 userId 才能判断该用户是否为管理员
+        if (!SecurityUtils.isAdmin(userId)) {
+            bizRegistration.setUserId(userId);
         }
+
         return bizRegistrationMapper.selectBizRegistrationList(bizRegistration);
     }
 
@@ -105,7 +109,7 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService
         bizRegistration.setUserId(userId);
         bizRegistration.setUserName(currentUser.getNickName()); // 填充姓名
         bizRegistration.setDeptName(currentUser.getDept() != null ? currentUser.getDept().getDeptName() : "未知学院"); // 填充学院
-        // 假设 SysUser 的 remark 字段存的是学号，如果没有专门字段的话
+        // 假设 SysUser 的 remark 字段存的是学号，如果没有专门的字段的话
         bizRegistration.setStudentNo(currentUser.getRemark());
 
         // 4. 初始化状态
@@ -141,4 +145,16 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService
     {
         return bizRegistrationMapper.deleteBizRegistrationByRegId(regId);
     }
+
+
+    @Override
+    public List<java.util.Map<String, Object>> selectDeptStats() {
+        return bizRegistrationMapper.selectDeptStats();
+    }
+
+    @Override
+    public List<java.util.Map<String, Object>> selectActivityStats() {
+        return bizRegistrationMapper.selectActivityStats();
+    }
+
 }

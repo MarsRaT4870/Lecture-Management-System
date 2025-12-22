@@ -2,6 +2,8 @@ package com.ruoyi.biz.domain;
 
 import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import com.ruoyi.common.annotation.Excel;
@@ -13,6 +15,8 @@ import com.ruoyi.common.core.domain.BaseEntity;
  * @author ruoyi
  * @date 2025-12-17
  */
+@Data
+@EqualsAndHashCode(callSuper = true)
 public class BizRegistration extends BaseEntity
 {
     private static final long serialVersionUID = 1L;

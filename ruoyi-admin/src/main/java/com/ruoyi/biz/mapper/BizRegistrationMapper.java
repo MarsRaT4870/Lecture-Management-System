@@ -67,4 +67,14 @@ public interface BizRegistrationMapper
      * @return 报名人数
      */
     public int selectRegistrationCount(Long activityId);
+
+    /**
+     * 统计各学院报名人数 (用于饼图)
+     */
+    public List<java.util.Map<String, Object>> selectDeptStats();
+
+    /**
+     * 统计热门活动Top 5 (用于柱状图)
+     */
+    public List<java.util.Map<String, Object>> selectActivityStats();
 }
