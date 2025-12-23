@@ -2,12 +2,15 @@ package com.ruoyi.biz.service;
 
 import java.util.List;
 import java.util.Map;
+
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.biz.domain.BizRegistration;
+import com.ruoyi.biz.domain.dto.CheckInCommand;
 
 /**
  * 活动报名签到Service接口
  */
-public interface IBizRegistrationService {
+public interface IBizRegistrationService extends IService<BizRegistration> {
     /**
      * 查询活动报名签到
      * @param regId 活动报名签到主键
@@ -64,4 +67,7 @@ public interface IBizRegistrationService {
      * [新增] 获取统计数据
      */
     public List<Map<String, Object>> getDeptStatistics();
+
+    // 【核心】执行智能签到
+    void executeCheckIn(CheckInCommand command);
 }

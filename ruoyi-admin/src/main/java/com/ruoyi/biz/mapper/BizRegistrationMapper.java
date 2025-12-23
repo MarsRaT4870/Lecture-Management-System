@@ -2,6 +2,8 @@ package com.ruoyi.biz.mapper;
 
 import java.util.List;
 import java.util.Map;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ruoyi.biz.domain.BizRegistration;
 import org.springframework.stereotype.Repository;
 
@@ -9,7 +11,7 @@ import org.springframework.stereotype.Repository;
  * 活动报名签到Mapper接口
  */
 @Repository
-public interface BizRegistrationMapper {
+public interface BizRegistrationMapper extends BaseMapper<BizRegistration> {
     /**
      * 查询活动报名签到
      * @param regId 活动报名签到主键

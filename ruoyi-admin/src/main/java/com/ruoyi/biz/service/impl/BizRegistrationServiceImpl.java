@@ -1,7 +1,13 @@
 package com.ruoyi.biz.service.impl;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.biz.domain.dto.CheckInCommand;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
@@ -19,7 +25,7 @@ import com.ruoyi.biz.domain.BizActivity;
  * 活动报名签到Service业务层处理
  */
 @Service
-public class BizRegistrationServiceImpl implements IBizRegistrationService {
+public class BizRegistrationServiceImpl extends ServiceImpl<BizRegistrationMapper, BizRegistration> implements IBizRegistrationService {
 
     @Autowired
     private BizRegistrationMapper bizRegistrationMapper;
@@ -178,4 +184,43 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService {
     public int deleteBizRegistrationByRegId(Long regId) {
         return bizRegistrationMapper.deleteBizRegistrationByRegId(regId);
     }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class) // 开启事务，保证严谨性
+    public void executeCheckIn(CheckInCommand command) {
+        // 1. 使用 Lambda 查询，查出该用户对该活动的报名记录
+        BizRegistration record = this.getOne(
+                new LambdaQueryWrapper<BizRegistration>()
+                        .eq(BizRegistration::getActivityId, command.getActivityId())
+                        .eq(BizRegistration::getUserId, command.getUserId())
+        );
+
+        // 2. 严谨的逻辑校验 (防御性编程)
+        if (record == null) {
+            throw new ServiceException("签到失败：您未报名参加该活动！");
+        }
+        if ("2".equals(record.getStatus())) {
+            throw new ServiceException("请勿重复操作，您已签到成功！");
+        }
+        if (!"1".equals(record.getStatus())) { // 假设 "1" 是已报名(审核通过)
+            throw new ServiceException("您的报名状态异常（未审核或已取消），无法签到。");
+        }
+
+        // 3. (可选) 校验 Token 或 GPS 距离
+        // if (!isValidToken(command.getCheckInToken())) ...
+
+        // 4. 执行签到更新 (使用 Lambda Update)
+        boolean updateSuccess = this.update(
+                new LambdaUpdateWrapper<BizRegistration>()
+                        .set(BizRegistration::getStatus, "2") // 状态变为已签到
+                        .set(BizRegistration::getCheckinTime, new Date()) // 记录当前时间
+                        .eq(BizRegistration::getRegId, record.getRegId()) // 锁定主键更新
+        );
+
+        if (!updateSuccess) {
+            throw new ServiceException("系统繁忙，签到更新失败");
+        }
+    }
+
 }
