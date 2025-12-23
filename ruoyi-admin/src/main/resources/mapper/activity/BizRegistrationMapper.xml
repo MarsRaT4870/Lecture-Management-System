@@ -1,39 +1,41 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.biz.mapper.BizRegistrationMapper">
 
     <resultMap type="com.ruoyi.biz.domain.BizRegistration" id="BizRegistrationResult">
-        <result property="regId"    column="reg_id"    />
-        <result property="activityId"    column="activity_id"    />
-        <result property="userId"    column="user_id"    />
-        <result property="userName"    column="user_name"    />
-        <result property="studentNo"    column="student_no"    />
-        <result property="deptName"    column="dept_name"    />
-        <result property="status"    column="status"    />
-        <result property="checkinTime"    column="checkin_time"    />
-        <result property="createTime"    column="create_time"    />
+        <id     property="regId"       column="reg_id"        />
+        <result property="activityId"  column="activity_id"   />
+        <result property="userId"      column="user_id"       />
+        <result property="userName"    column="user_name"     />
+        <result property="studentNo"   column="student_no"    />
+        <result property="deptName"    column="dept_name"     />
+        <result property="status"      column="status"        />
+        <result property="checkinStatus" column="checkin_status" />
+        <result property="checkinTime" column="checkin_time"  />
+        <result property="createTime"  column="create_time"   />
+
+        <result property="activityName" column="activity_name" />
     </resultMap>
 
     <sql id="selectBizRegistrationVo">
-        select reg_id, activity_id, user_id, user_name, student_no, dept_name, status, checkin_time, create_time from biz_registration
+        select reg_id, activity_id, user_id, user_name, student_no, dept_name, status, checkin_status, checkin_time, create_time
+        from biz_registration
     </sql>
 
     <select id="selectBizRegistrationList" parameterType="com.ruoyi.biz.domain.BizRegistration" resultMap="BizRegistrationResult">
         <include refid="selectBizRegistrationVo"/>
-        <where>  
+        <where>
             <if test="activityId != null "> and activity_id = #{activityId}</if>
             <if test="userId != null "> and user_id = #{userId}</if>
             <if test="userName != null  and userName != ''"> and user_name like concat('%', #{userName}, '%')</if>
             <if test="studentNo != null  and studentNo != ''"> and student_no = #{studentNo}</if>
-            <if test="deptName != null  and deptName != ''"> and dept_name like concat('%', #{deptName}, '%')</if>
             <if test="status != null  and status != ''"> and status = #{status}</if>
-            <if test="checkinTime != null "> and checkin_time = #{checkinTime}</if>
         </where>
     </select>
-    
-    <select id="selectBizRegistrationByRegId" parameterType="Long" resultMap="BizRegistrationResult">
+
+    <select id="selectBizRegistrationById" parameterType="Long" resultMap="BizRegistrationResult">
         <include refid="selectBizRegistrationVo"/>
         where reg_id = #{regId}
     </select>
@@ -47,9 +49,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="studentNo != null">student_no,</if>
             <if test="deptName != null">dept_name,</if>
             <if test="status != null">status,</if>
+            <if test="checkinStatus != null">checkin_status,</if>
             <if test="checkinTime != null">checkin_time,</if>
             <if test="createTime != null">create_time,</if>
-         </trim>
+        </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="activityId != null">#{activityId},</if>
             <if test="userId != null">#{userId},</if>
@@ -57,9 +60,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="studentNo != null">#{studentNo},</if>
             <if test="deptName != null">#{deptName},</if>
             <if test="status != null">#{status},</if>
+            <if test="checkinStatus != null">#{checkinStatus},</if>
             <if test="checkinTime != null">#{checkinTime},</if>
             <if test="createTime != null">#{createTime},</if>
-         </trim>
+        </trim>
     </insert>
 
     <update id="updateBizRegistration" parameterType="com.ruoyi.biz.domain.BizRegistration">
@@ -67,53 +71,29 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <trim prefix="SET" suffixOverrides=",">
             <if test="activityId != null">activity_id = #{activityId},</if>
             <if test="userId != null">user_id = #{userId},</if>
-            <if test="userName != null">user_name = #{userName},</if>
-            <if test="studentNo != null">student_no = #{studentNo},</if>
-            <if test="deptName != null">dept_name = #{deptName},</if>
             <if test="status != null">status = #{status},</if>
+            <if test="checkinStatus != null">checkin_status = #{checkinStatus},</if>
             <if test="checkinTime != null">checkin_time = #{checkinTime},</if>
-            <if test="createTime != null">create_time = #{createTime},</if>
         </trim>
         where reg_id = #{regId}
     </update>
 
-    <delete id="deleteBizRegistrationByRegId" parameterType="Long">
-        delete from biz_registration where reg_id = #{regId}
-    </delete>
-
     <delete id="deleteBizRegistrationByRegIds" parameterType="String">
-        delete from biz_registration where reg_id in 
+        delete from biz_registration where reg_id in
         <foreach item="regId" collection="array" open="(" separator="," close=")">
             #{regId}
         </foreach>
     </delete>
 
-    <select id="selectRegistrationCount" parameterType="Long" resultType="int">
-        select count(1) from biz_registration
-        where activity_id = #{activityId}
-          and status != '2'
-    </select>
-
-
     <select id="selectDeptStats" resultType="java.util.Map">
-        SELECT
-            dept_name AS name,
-            COUNT(*) AS value
-        FROM biz_registration
-        WHERE status != '2'
-        GROUP BY dept_name
+        select dept_name as name, count(*) as value
+        from biz_registration
+        group by dept_name
     </select>
 
     <select id="selectActivityStats" resultType="java.util.Map">
-        SELECT
-            a.title AS name,
-            COUNT(r.reg_id) AS value
-        FROM biz_activity a
-            LEFT JOIN biz_registration r ON a.activity_id = r.activity_id AND r.status != '2'
-        WHERE a.status = '0'
-        GROUP BY a.activity_id
-        ORDER BY value DESC
-            LIMIT 5
+        select activity_id as name, count(*) as value
+        from biz_registration
+        group by activity_id
     </select>
-
 </mapper>

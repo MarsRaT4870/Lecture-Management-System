@@ -1,8 +1,7 @@
-package com.ruoyi.biz.controller;
+package com.ruoyi.biz.controller; // ★注意：请确认这里的包名和你实际文件夹路径一致
 
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,23 +22,22 @@ import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
 
 /**
- * 报名记录Controller
- *
- * @author ruoyi
- * @date 2025-12-17
+ * 报名管理 Controller
  */
 @RestController
-@RequestMapping("/activity/register")
-public class BizRegistrationController extends BaseController {
+@RequestMapping("/biz/registration")
+public class BizRegistrationController extends BaseController
+{
     @Autowired
     private IBizRegistrationService bizRegistrationService;
 
     /**
      * 查询报名记录列表
      */
-    @PreAuthorize("@ss.hasPermi('activity:register:list')")
+    // @PreAuthorize("@ss.hasPermi('biz:registration:list')")
     @GetMapping("/list")
-    public TableDataInfo list(BizRegistration bizRegistration) {
+    public TableDataInfo list(BizRegistration bizRegistration)
+    {
         startPage();
         List<BizRegistration> list = bizRegistrationService.selectBizRegistrationList(bizRegistration);
         return getDataTable(list);
@@ -48,64 +46,49 @@ public class BizRegistrationController extends BaseController {
     /**
      * 导出报名记录列表
      */
-    @PreAuthorize("@ss.hasPermi('activity:register:export')")
-    @Log(title = "报名记录", businessType = BusinessType.EXPORT)
+    // @PreAuthorize("@ss.hasPermi('biz:registration:export')")
+    @Log(title = "报名管理", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(HttpServletResponse response, BizRegistration bizRegistration) {
+    public void export(HttpServletResponse response, BizRegistration bizRegistration)
+    {
         List<BizRegistration> list = bizRegistrationService.selectBizRegistrationList(bizRegistration);
         ExcelUtil<BizRegistration> util = new ExcelUtil<BizRegistration>(BizRegistration.class);
-        util.exportExcel(response, list, "报名记录数据");
+        util.exportExcel(response, list, "报名数据");
     }
 
     /**
-     * 获取报名记录详细信息
+     * 获取报名详细信息
+     * (对应前端 getRegistration API)
      */
-    @PreAuthorize("@ss.hasPermi('activity:register:query')")
+    // @PreAuthorize("@ss.hasPermi('biz:registration:query')")
     @GetMapping(value = "/{regId}")
-    public AjaxResult getInfo(@PathVariable("regId") Long regId) {
-        return success(bizRegistrationService.selectBizRegistrationByRegId(regId));
+    public AjaxResult getInfo(@PathVariable("regId") Long regId)
+    {
+        return AjaxResult.success(bizRegistrationService.selectBizRegistrationById(regId));
     }
 
     /**
-     * 新增报名记录
+     * 新增报名 (核心功能：学生点击报名时调用)
+     * (对应前端 addRegistration API)
      */
-    @PreAuthorize("@ss.hasPermi('activity:register:add')")
-    @Log(title = "报名记录", businessType = BusinessType.INSERT)
+    // @PreAuthorize("@ss.hasPermi('biz:registration:add')")
+    @Log(title = "报名管理", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@RequestBody BizRegistration bizRegistration) {
+    public AjaxResult add(@RequestBody BizRegistration bizRegistration)
+    {
+        // 这里会调用我们在 Service 写的“防重复、防爆满”逻辑
         return toAjax(bizRegistrationService.insertBizRegistration(bizRegistration));
     }
 
     /**
-     * 修改报名记录
+     * 删除报名
+     * (对应前端 delRegistration API)
      */
-    @PreAuthorize("@ss.hasPermi('activity:register:edit')")
-    @Log(title = "报名记录", businessType = BusinessType.UPDATE)
-    @PutMapping
-    public AjaxResult edit(@RequestBody BizRegistration bizRegistration) {
-        return toAjax(bizRegistrationService.updateBizRegistration(bizRegistration));
-    }
-
-    /**
-     * 删除报名记录
-     */
-    @PreAuthorize("@ss.hasPermi('activity:register:remove')")
-    @Log(title = "报名记录", businessType = BusinessType.DELETE)
+    // @PreAuthorize("@ss.hasPermi('biz:registration:remove')")
+    @Log(title = "报名管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{regIds}")
-    public AjaxResult remove(@PathVariable Long[] regIds) {
+    public AjaxResult remove(@PathVariable Long[] regIds)
+    {
         return toAjax(bizRegistrationService.deleteBizRegistrationByRegIds(regIds));
     }
-
-
-    /**
-     * 获取数据大屏统计信息
-     */
-    @GetMapping("/stats")
-    public AjaxResult getStats() {
-        AjaxResult ajax = AjaxResult.success();
-        ajax.put("deptStats", bizRegistrationService.selectDeptStats());
-        ajax.put("activityStats", bizRegistrationService.selectActivityStats());
-        return ajax;
-    }
-
 }

@@ -1,24 +1,20 @@
 package com.ruoyi.biz.service.impl;
 
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.exception.ServiceException;
-import com.ruoyi.common.core.domain.entity.SysUser;
-import com.ruoyi.system.service.ISysUserService;
 import com.ruoyi.biz.mapper.BizRegistrationMapper;
-import com.ruoyi.biz.mapper.BizActivityMapper;
 import com.ruoyi.biz.domain.BizRegistration;
 import com.ruoyi.biz.domain.BizActivity;
 import com.ruoyi.biz.service.IBizRegistrationService;
-import com.ruoyi.biz.enums.ActivityStatus;
-import com.ruoyi.biz.enums.RegistrationStatus;
+import com.ruoyi.biz.service.IBizActivityService;
 
 /**
  * 报名记录Service业务层处理
- * 重构版：包含智能校验与自动填表
  */
 @Service
 public class BizRegistrationServiceImpl implements IBizRegistrationService
@@ -27,18 +23,15 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService
     private BizRegistrationMapper bizRegistrationMapper;
 
     @Autowired
-    private BizActivityMapper bizActivityMapper; // 引入活动Mapper查询活动详情
-
-    @Autowired
-    private ISysUserService userService; // 引入用户Service查询当前学生信息
+    private IBizActivityService bizActivityService; // 必须注入活动服务
 
     /**
      * 查询报名记录
      */
     @Override
-    public BizRegistration selectBizRegistrationByRegId(Long regId)
+    public BizRegistration selectBizRegistrationById(Long regId)
     {
-        return bizRegistrationMapper.selectBizRegistrationByRegId(regId);
+        return bizRegistrationMapper.selectBizRegistrationById(regId);
     }
 
     /**
@@ -47,80 +40,64 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService
     @Override
     public List<BizRegistration> selectBizRegistrationList(BizRegistration bizRegistration)
     {
-        // 获取当前用户ID
+        // 如果是普通用户（非管理员），强制只查自己的数据
         Long userId = SecurityUtils.getUserId();
-
-        // 修复点：isAdmin 需要传入 userId 才能判断该用户是否为管理员
         if (!SecurityUtils.isAdmin(userId)) {
             bizRegistration.setUserId(userId);
         }
-
         return bizRegistrationMapper.selectBizRegistrationList(bizRegistration);
     }
 
     /**
-     * 新增报名记录 (核心业务逻辑)
+     * 新增报名记录
      */
     @Override
     public int insertBizRegistration(BizRegistration bizRegistration)
     {
-        // 1. 获取当前活动信息
-        Long activityId = bizRegistration.getActivityId();
-        BizActivity activity = bizActivityMapper.selectBizActivityByActivityId(activityId);
-
-        // --- 校验A: 活动是否存在 ---
-        if (activity == null) {
-            throw new ServiceException("目标活动不存在");
-        }
-
-        // --- 校验B: 活动是否已结束/关闭 ---
-        // 使用枚举 ActivityStatus.CLOSED ("1")
-        if (ActivityStatus.CLOSED.getCode().equals(activity.getStatus())) {
-            throw new ServiceException("活动已结束，无法报名");
-        }
-
-        // 2. 获取当前登录用户信息
+        // 1. 获取并设置当前用户信息
         Long userId = SecurityUtils.getUserId();
-        SysUser currentUser = userService.selectUserById(userId);
-
-        // --- 校验C: 是否重复报名 ---
-        BizRegistration queryParam = new BizRegistration();
-        queryParam.setActivityId(activityId);
-        queryParam.setUserId(userId);
-        List<BizRegistration> exists = bizRegistrationMapper.selectBizRegistrationList(queryParam);
-
-        // 如果查到了记录，且状态不是“已取消”，则视为重复
-        for (BizRegistration reg : exists) {
-            if (!RegistrationStatus.CANCELLED.getCode().equals(reg.getStatus())) {
-                throw new ServiceException("您已报名该活动，请勿重复操作");
-            }
-        }
-
-        // --- 校验D: 人数限制 (防超员) ---
-        // 如果设置了最大人数 (maxPeople > 0)
-        if (activity.getMaxPeople() != null && activity.getMaxPeople() > 0) {
-            int currentCount = bizRegistrationMapper.selectRegistrationCount(activityId);
-            if (currentCount >= activity.getMaxPeople()) {
-                throw new ServiceException("报名火爆，名额已满！");
-            }
-        }
-
-        // 3. 自动填表 (填充冗余字段，方便以后统计)
         bizRegistration.setUserId(userId);
-        bizRegistration.setUserName(currentUser.getNickName()); // 填充姓名
-        bizRegistration.setDeptName(currentUser.getDept() != null ? currentUser.getDept().getDeptName() : "未知学院"); // 填充学院
-        // 假设 SysUser 的 remark 字段存的是学号，如果没有专门的字段的话
-        bizRegistration.setStudentNo(currentUser.getRemark());
+        bizRegistration.setUserName(SecurityUtils.getUsername());
+        bizRegistration.setCreateTime(DateUtils.getNowDate());
 
-        // 4. 初始化状态
-        bizRegistration.setStatus(RegistrationStatus.REGISTERED.getCode()); // 设置为 '0' (已报名)
-        bizRegistration.setCreateTime(DateUtils.getNowDate()); // 报名时间
+        // 默认状态设为"已报名"(1)
+        if (bizRegistration.getStatus() == null) {
+            bizRegistration.setStatus("1");
+        }
+
+        // 2.【校验】检查是否重复报名
+        BizRegistration queryParams = new BizRegistration();
+        queryParams.setActivityId(bizRegistration.getActivityId());
+        queryParams.setUserId(userId);
+        // 注意：这里调用 Mapper 直接查，避免触发上面的 SecurityUtils.isAdmin 过滤逻辑影响判断
+        List<BizRegistration> list = bizRegistrationMapper.selectBizRegistrationList(queryParams);
+        if (list.size() > 0) {
+            throw new ServiceException("您已经报名过该活动，请勿重复报名！");
+        }
+
+        // 3.【校验】检查活动人数是否已满
+        BizActivity activity = bizActivityService.selectBizActivityByActivityId(bizRegistration.getActivityId());
+        if (activity == null) {
+            throw new ServiceException("活动不存在！");
+        }
+
+        // 统计当前活动已报名人数
+        BizRegistration countParams = new BizRegistration();
+        countParams.setActivityId(bizRegistration.getActivityId());
+        List<BizRegistration> currentList = bizRegistrationMapper.selectBizRegistrationList(countParams);
+
+        // 假设 maxPeople 为 0 或 null 代表不限人数
+        if (activity.getMaxPeople() != null && activity.getMaxPeople() > 0) {
+            if (currentList.size() >= activity.getMaxPeople()) {
+                throw new ServiceException("很抱歉，该活动名额已满！");
+            }
+        }
 
         return bizRegistrationMapper.insertBizRegistration(bizRegistration);
     }
 
     /**
-     * 修改报名记录 (用于签到、评价、取消报名)
+     * 修改报名记录
      */
     @Override
     public int updateBizRegistration(BizRegistration bizRegistration)
@@ -129,7 +106,7 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService
     }
 
     /**
-     * 批量删除
+     * 批量删除报名记录
      */
     @Override
     public int deleteBizRegistrationByRegIds(Long[] regIds)
@@ -137,24 +114,13 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService
         return bizRegistrationMapper.deleteBizRegistrationByRegIds(regIds);
     }
 
-    /**
-     * 删除单条
-     */
     @Override
-    public int deleteBizRegistrationByRegId(Long regId)
-    {
-        return bizRegistrationMapper.deleteBizRegistrationByRegId(regId);
-    }
-
-
-    @Override
-    public List<java.util.Map<String, Object>> selectDeptStats() {
+    public List<Map<String, Object>> selectDeptStats() {
         return bizRegistrationMapper.selectDeptStats();
     }
 
     @Override
-    public List<java.util.Map<String, Object>> selectActivityStats() {
+    public List<Map<String, Object>> selectActivityStats() {
         return bizRegistrationMapper.selectActivityStats();
     }
-
 }
