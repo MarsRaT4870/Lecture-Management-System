@@ -87,35 +87,44 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void checkInActivity(Long activityId, String code) {
-        Long userId = SecurityUtils.getUserId();
-
-        // 修改点：使用 selectBizActivityById
+        // 【修复1】方法名修正：selectBizActivityById -> selectBizActivityByActivityId
         BizActivity activity = bizActivityMapper.selectBizActivityByActivityId(activityId);
 
         if (activity == null) {
             throw new ServiceException("活动不存在");
         }
 
-        if (StringUtils.isEmpty(code) || !code.equals(activity.getCheckinCode())) {
+        // 校验签到码 (防止空指针)
+        String dbCode = activity.getCheckinCode();
+        if (dbCode == null || dbCode.isEmpty()) {
+            throw new ServiceException("该活动未设置签到码，无法签到");
+        }
+        if (!dbCode.equals(code)) {
             throw new ServiceException("签到码错误");
         }
 
+        // 构造查询条件：查当前用户的报名记录
         BizRegistration query = new BizRegistration();
         query.setActivityId(activityId);
-        query.setUserId(userId);
-        List<BizRegistration> list = bizRegistrationMapper.selectBizRegistrationList(query);
+        // 【修复2】获取当前用户ID (原代码这里会报错)
+        query.setUserId(SecurityUtils.getUserId());
 
+        List<BizRegistration> list = bizRegistrationMapper.selectBizRegistrationList(query);
         if (list.isEmpty()) {
-            throw new ServiceException("未报名，无法签到");
+            throw new ServiceException("您未报名该活动，无法签到");
         }
 
         BizRegistration reg = list.get(0);
-        if ("1".equals(reg.getStatus())) {
-            throw new ServiceException("您已签到，无需重复");
+
+        // 【修复3】状态逻辑修正：2 代表已签到
+        if ("2".equals(reg.getStatus())) {
+            throw new ServiceException("您已签到，无需重复操作");
         }
 
-        reg.setStatus("1"); // 1-已签到
-        reg.setCheckinTime(DateUtils.getNowDate());
+        reg.setStatus("2"); // 设置为“已签到”状态
+        // 这里假设你有 setCheckinTime 方法，如果没有可以删掉下面这行
+        reg.setCheckinTime(new java.util.Date());
+
         bizRegistrationMapper.updateBizRegistration(reg);
     }
 
@@ -124,10 +133,34 @@ public class BizRegistrationServiceImpl implements IBizRegistrationService {
         return bizRegistrationMapper.selectDeptStatistics();
     }
 
-    // 基础CRUD实现
+    /**
+     * 新增报名（含防重复逻辑）
+     */
     @Override
     public int insertBizRegistration(BizRegistration bizRegistration) {
+        // 1. 自动填入报名时间
         bizRegistration.setCreateTime(DateUtils.getNowDate());
+
+        // 2. 设置默认状态：如果是学生自主报名，通常是 "0"(待审核) 或 "1"(已报名)
+        // 这里我们默认设为 0 (待审核)，或者你可以改成 1
+        if (bizRegistration.getStatus() == null) {
+            bizRegistration.setStatus("0");
+        }
+
+        // --- 【核心修改】防重复报名检查 ---
+        BizRegistration query = new BizRegistration();
+        query.setActivityId(bizRegistration.getActivityId());
+        query.setUserId(bizRegistration.getUserId());
+
+        // 查询该用户在这个活动下有没有记录
+        List<BizRegistration> list = bizRegistrationMapper.selectBizRegistrationList(query);
+
+        if (list.size() > 0) {
+            // 如果查到了，直接抛出异常，阻止写入
+            throw new ServiceException("您已经报名过该活动了，请勿重复操作！");
+        }
+        // ------------------------------------
+
         return bizRegistrationMapper.insertBizRegistration(bizRegistration);
     }
 

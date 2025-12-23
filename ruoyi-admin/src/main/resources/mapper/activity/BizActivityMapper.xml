@@ -6,7 +6,6 @@
 
     <resultMap type="com.ruoyi.biz.domain.BizActivity" id="BizActivityResult">
         <id property="activityId" column="activity_id" />
-
         <result property="title"    column="title"    />
         <result property="description"    column="description"    />
         <result property="speaker"    column="speaker"    />
@@ -15,6 +14,7 @@
         <result property="startTime"    column="start_time"    />
         <result property="endTime"    column="end_time"    />
         <result property="maxPeople"    column="max_people"    />
+        <result property="checkinCode"    column="checkin_code"    />
         <result property="status"    column="status"    />
         <result property="auditStatus"    column="audit_status"    />
         <result property="deptId"    column="dept_id"    />
@@ -26,7 +26,10 @@
     </resultMap>
 
     <sql id="selectBizActivityVo">
-        select activity_id, title, description, speaker, speaker_info, location, start_time, end_time, max_people, status, audit_status, dept_id, create_by, create_time, update_by, update_time, remark from biz_activity
+        select activity_id, title, description, speaker, speaker_info, location,
+               start_time, end_time, max_people, checkin_code, status,
+               audit_status, dept_id, create_by, create_time, update_by, update_time, remark
+        from biz_activity
     </sql>
 
     <select id="selectBizActivityList" parameterType="com.ruoyi.biz.domain.BizActivity" resultMap="BizActivityResult">
@@ -40,6 +43,7 @@
             <if test="startTime != null "> and start_time = #{startTime}</if>
             <if test="endTime != null "> and end_time = #{endTime}</if>
             <if test="maxPeople != null "> and max_people = #{maxPeople}</if>
+            <if test="checkinCode != null  and checkinCode != ''"> and checkin_code = #{checkinCode}</if>
             <if test="status != null  and status != ''"> and status = #{status}</if>
             <if test="auditStatus != null  and auditStatus != ''"> and audit_status = #{auditStatus}</if>
             <if test="deptId != null "> and dept_id = #{deptId}</if>
@@ -62,6 +66,7 @@
             <if test="startTime != null">start_time,</if>
             <if test="endTime != null">end_time,</if>
             <if test="maxPeople != null">max_people,</if>
+            <if test="checkinCode != null">checkin_code,</if>
             <if test="status != null">status,</if>
             <if test="auditStatus != null">audit_status,</if>
             <if test="deptId != null">dept_id,</if>
@@ -80,6 +85,7 @@
             <if test="startTime != null">#{startTime},</if>
             <if test="endTime != null">#{endTime},</if>
             <if test="maxPeople != null">#{maxPeople},</if>
+            <if test="checkinCode != null">#{checkinCode},</if>
             <if test="status != null">#{status},</if>
             <if test="auditStatus != null">#{auditStatus},</if>
             <if test="deptId != null">#{deptId},</if>
@@ -102,6 +108,7 @@
             <if test="startTime != null">start_time = #{startTime},</if>
             <if test="endTime != null">end_time = #{endTime},</if>
             <if test="maxPeople != null">max_people = #{maxPeople},</if>
+            <if test="checkinCode != null">checkin_code = #{checkinCode},</if>
             <if test="status != null">status = #{status},</if>
             <if test="auditStatus != null">audit_status = #{auditStatus},</if>
             <if test="deptId != null">dept_id = #{deptId},</if>
@@ -124,4 +131,14 @@
             #{activityId}
         </foreach>
     </delete>
+
+    <select id="selectActivityStats" resultType="java.util.Map">
+        SELECT a.title, COUNT(r.reg_id) as count
+        FROM biz_activity a
+            LEFT JOIN biz_registration r ON a.activity_id = r.activity_id
+        GROUP BY a.activity_id, a.title
+        ORDER BY count DESC
+            LIMIT 5
+    </select>
+
 </mapper>

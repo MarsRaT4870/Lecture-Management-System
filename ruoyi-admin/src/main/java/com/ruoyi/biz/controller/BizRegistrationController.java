@@ -27,14 +27,23 @@ public class BizRegistrationController extends BaseController {
     /**
      * 查询列表
      */
+    /**
+     * 查询报名记录列表
+     */
     @PreAuthorize("@ss.hasPermi('biz:registration:list')")
     @GetMapping("/list")
     public TableDataInfo list(BizRegistration bizRegistration) {
-        startPage();
-        // 非管理员只能看自己的
-        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId())) {
-            bizRegistration.setUserId(SecurityUtils.getUserId());
+        // 1. 获取当前用户
+        Long userId = SecurityUtils.getUserId();
+
+        // 2. 判断是不是管理员 (admin的ID通常是1)
+        if (!SecurityUtils.isAdmin(userId)) {
+            // 如果不是管理员（即学生），强制只查自己的 ID
+            bizRegistration.setUserId(userId);
         }
+
+        // 3. 正常查询
+        startPage();
         List<BizRegistration> list = bizRegistrationService.selectBizRegistrationList(bizRegistration);
         return getDataTable(list);
     }
@@ -91,10 +100,16 @@ public class BizRegistrationController extends BaseController {
         return success(bizRegistrationService.selectBizRegistrationByRegId(regId));
     }
 
+    /**
+     * 新增活动报名
+     */
     @PreAuthorize("@ss.hasPermi('biz:registration:add')")
     @Log(title = "活动报名签到", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody BizRegistration bizRegistration) {
+        // 【关键修改】获取当前登录用户的ID，并设置进去
+        bizRegistration.setUserId(SecurityUtils.getUserId());
+
         return toAjax(bizRegistrationService.insertBizRegistration(bizRegistration));
     }
 

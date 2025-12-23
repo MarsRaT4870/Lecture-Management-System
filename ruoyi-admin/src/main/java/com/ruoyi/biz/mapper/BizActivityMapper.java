@@ -1,6 +1,8 @@
 package com.ruoyi.biz.mapper;
 
 import java.util.List;
+import java.util.Map;
+
 import com.ruoyi.biz.domain.BizActivity;
 import org.springframework.stereotype.Repository;
 
@@ -61,4 +63,10 @@ public interface BizActivityMapper
      * @return 结果
      */
     public int deleteBizActivityByActivityIds(Long[] activityIds);
+
+    /**
+     * 查询活动统计数据
+     */
+    public List<Map<String, Object>> selectActivityStats();
+
 }
