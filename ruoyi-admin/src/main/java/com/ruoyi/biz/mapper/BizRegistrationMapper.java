@@ -3,38 +3,57 @@ package com.ruoyi.biz.mapper;
 import java.util.List;
 import java.util.Map;
 import com.ruoyi.biz.domain.BizRegistration;
+import org.springframework.stereotype.Repository;
 
 /**
- * 报名记录Mapper接口
+ * 活动报名签到Mapper接口
  */
-public interface BizRegistrationMapper
-{
+@Repository
+public interface BizRegistrationMapper {
     /**
-     * 查询报名记录
+     * 查询活动报名签到
+     * @param regId 活动报名签到主键
+     * @return 活动报名签到
      */
-    public BizRegistration selectBizRegistrationById(Long regId);
+    public BizRegistration selectBizRegistrationByRegId(Long regId);
 
     /**
-     * 查询报名记录列表
+     * 查询活动报名签到列表
+     * @param bizRegistration 活动报名签到
+     * @return 活动报名签到集合
      */
     public List<BizRegistration> selectBizRegistrationList(BizRegistration bizRegistration);
 
     /**
-     * 新增报名记录
+     * 新增活动报名签到
+     * @param bizRegistration 活动报名签到
+     * @return 结果
      */
     public int insertBizRegistration(BizRegistration bizRegistration);
 
     /**
-     * 修改报名记录
+     * 修改活动报名签到
+     * @param bizRegistration 活动报名签到
+     * @return 结果
      */
     public int updateBizRegistration(BizRegistration bizRegistration);
 
     /**
-     * 批量删除报名记录
+     * 删除活动报名签到
+     * @param regId 活动报名签到主键
+     * @return 结果
+     */
+    public int deleteBizRegistrationByRegId(Long regId);
+
+    /**
+     * 批量删除活动报名签到
+     * @param regIds 需要删除的数据主键集合
+     * @return 结果
      */
     public int deleteBizRegistrationByRegIds(Long[] regIds);
 
-    // 统计接口
-    public List<Map<String, Object>> selectDeptStats();
-    public List<Map<String, Object>> selectActivityStats();
+    /**
+     * [新增] 统计学院活跃度
+     */
+    public List<Map<String, Object>> selectDeptStatistics();
 }

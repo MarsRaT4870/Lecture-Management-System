@@ -12,15 +12,14 @@
         <result property="studentNo"   column="student_no"    />
         <result property="deptName"    column="dept_name"     />
         <result property="status"      column="status"        />
-        <result property="checkinStatus" column="checkin_status" />
         <result property="checkinTime" column="checkin_time"  />
         <result property="createTime"  column="create_time"   />
-
-        <result property="activityName" column="activity_name" />
+        <result property="score"       column="score"         />
+        <result property="feedback"    column="feedback"      />
     </resultMap>
 
     <sql id="selectBizRegistrationVo">
-        select reg_id, activity_id, user_id, user_name, student_no, dept_name, status, checkin_status, checkin_time, create_time
+        select reg_id, activity_id, user_id, user_name, student_no, dept_name, status, checkin_time, create_time, score, feedback
         from biz_registration
     </sql>
 
@@ -35,7 +34,7 @@
         </where>
     </select>
 
-    <select id="selectBizRegistrationById" parameterType="Long" resultMap="BizRegistrationResult">
+    <select id="selectBizRegistrationByRegId" parameterType="Long" resultMap="BizRegistrationResult">
         <include refid="selectBizRegistrationVo"/>
         where reg_id = #{regId}
     </select>
@@ -49,9 +48,10 @@
             <if test="studentNo != null">student_no,</if>
             <if test="deptName != null">dept_name,</if>
             <if test="status != null">status,</if>
-            <if test="checkinStatus != null">checkin_status,</if>
             <if test="checkinTime != null">checkin_time,</if>
             <if test="createTime != null">create_time,</if>
+            <if test="score != null">score,</if>
+            <if test="feedback != null">feedback,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="activityId != null">#{activityId},</if>
@@ -60,9 +60,10 @@
             <if test="studentNo != null">#{studentNo},</if>
             <if test="deptName != null">#{deptName},</if>
             <if test="status != null">#{status},</if>
-            <if test="checkinStatus != null">#{checkinStatus},</if>
             <if test="checkinTime != null">#{checkinTime},</if>
             <if test="createTime != null">#{createTime},</if>
+            <if test="score != null">#{score},</if>
+            <if test="feedback != null">#{feedback},</if>
         </trim>
     </insert>
 
@@ -71,12 +72,21 @@
         <trim prefix="SET" suffixOverrides=",">
             <if test="activityId != null">activity_id = #{activityId},</if>
             <if test="userId != null">user_id = #{userId},</if>
+            <if test="userName != null">user_name = #{userName},</if>
+            <if test="studentNo != null">student_no = #{studentNo},</if>
+            <if test="deptName != null">dept_name = #{deptName},</if>
             <if test="status != null">status = #{status},</if>
-            <if test="checkinStatus != null">checkin_status = #{checkinStatus},</if>
             <if test="checkinTime != null">checkin_time = #{checkinTime},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="score != null">score = #{score},</if>
+            <if test="feedback != null">feedback = #{feedback},</if>
         </trim>
         where reg_id = #{regId}
     </update>
+
+    <delete id="deleteBizRegistrationByRegId" parameterType="Long">
+        delete from biz_registration where reg_id = #{regId}
+    </delete>
 
     <delete id="deleteBizRegistrationByRegIds" parameterType="String">
         delete from biz_registration where reg_id in
@@ -85,15 +95,13 @@
         </foreach>
     </delete>
 
-    <select id="selectDeptStats" resultType="java.util.Map">
-        select dept_name as name, count(*) as value
-        from biz_registration
-        group by dept_name
+    <select id="selectDeptStatistics" resultType="java.util.Map">
+        SELECT dept_name as name, COUNT(*) as value
+        FROM biz_registration
+        WHERE status != '2'
+        GROUP BY dept_name
+        ORDER BY value DESC
+            LIMIT 10
     </select>
 
-    <select id="selectActivityStats" resultType="java.util.Map">
-        select activity_id as name, count(*) as value
-        from biz_registration
-        group by activity_id
-    </select>
 </mapper>

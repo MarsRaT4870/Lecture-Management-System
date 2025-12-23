@@ -2,125 +2,147 @@ package com.ruoyi.biz.service.impl;
 
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
-import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.common.utils.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.biz.mapper.BizRegistrationMapper;
 import com.ruoyi.biz.domain.BizRegistration;
-import com.ruoyi.biz.domain.BizActivity;
 import com.ruoyi.biz.service.IBizRegistrationService;
-import com.ruoyi.biz.service.IBizActivityService;
+import com.ruoyi.biz.mapper.BizActivityMapper;
+import com.ruoyi.biz.domain.BizActivity;
 
 /**
- * 报名记录Service业务层处理
+ * 活动报名签到Service业务层处理
  */
 @Service
-public class BizRegistrationServiceImpl implements IBizRegistrationService
-{
+public class BizRegistrationServiceImpl implements IBizRegistrationService {
+
     @Autowired
     private BizRegistrationMapper bizRegistrationMapper;
 
     @Autowired
-    private IBizActivityService bizActivityService; // 必须注入活动服务
+    private BizActivityMapper bizActivityMapper;
 
-    /**
-     * 查询报名记录
-     */
     @Override
-    public BizRegistration selectBizRegistrationById(Long regId)
-    {
-        return bizRegistrationMapper.selectBizRegistrationById(regId);
+    public BizRegistration selectBizRegistrationByRegId(Long regId) {
+        return bizRegistrationMapper.selectBizRegistrationByRegId(regId);
     }
 
-    /**
-     * 查询报名记录列表
-     */
     @Override
-    public List<BizRegistration> selectBizRegistrationList(BizRegistration bizRegistration)
-    {
-        // 如果是普通用户（非管理员），强制只查自己的数据
-        Long userId = SecurityUtils.getUserId();
-        if (!SecurityUtils.isAdmin(userId)) {
-            bizRegistration.setUserId(userId);
-        }
+    public List<BizRegistration> selectBizRegistrationList(BizRegistration bizRegistration) {
         return bizRegistrationMapper.selectBizRegistrationList(bizRegistration);
     }
 
-    /**
-     * 新增报名记录
-     */
+    // 核心报名逻辑
     @Override
-    public int insertBizRegistration(BizRegistration bizRegistration)
-    {
-        // 1. 获取并设置当前用户信息
+    @Transactional(rollbackFor = Exception.class)
+    public int registerActivity(Long activityId) {
         Long userId = SecurityUtils.getUserId();
-        bizRegistration.setUserId(userId);
-        bizRegistration.setUserName(SecurityUtils.getUsername());
-        bizRegistration.setCreateTime(DateUtils.getNowDate());
-
-        // 默认状态设为"已报名"(1)
-        if (bizRegistration.getStatus() == null) {
-            bizRegistration.setStatus("1");
+        String username = SecurityUtils.getUsername();
+        String deptName = "公共学院";
+        try {
+            deptName = SecurityUtils.getLoginUser().getUser().getDept().getDeptName();
+        } catch (Exception e) {
+            // 忽略无部门情况
         }
 
-        // 2.【校验】检查是否重复报名
-        BizRegistration queryParams = new BizRegistration();
-        queryParams.setActivityId(bizRegistration.getActivityId());
-        queryParams.setUserId(userId);
-        // 注意：这里调用 Mapper 直接查，避免触发上面的 SecurityUtils.isAdmin 过滤逻辑影响判断
-        List<BizRegistration> list = bizRegistrationMapper.selectBizRegistrationList(queryParams);
-        if (list.size() > 0) {
-            throw new ServiceException("您已经报名过该活动，请勿重复报名！");
-        }
+        // 修改点：使用 selectBizActivityById (RuoYi默认生成的方法名)
+        BizActivity activity = bizActivityMapper.selectBizActivityByActivityId(activityId);
 
-        // 3.【校验】检查活动人数是否已满
-        BizActivity activity = bizActivityService.selectBizActivityByActivityId(bizRegistration.getActivityId());
         if (activity == null) {
-            throw new ServiceException("活动不存在！");
+            throw new ServiceException("活动不存在");
+        }
+        if ("1".equals(activity.getStatus())) {
+            throw new ServiceException("活动已关闭");
+        }
+        if (DateUtils.getNowDate().after(activity.getEndTime())) {
+            throw new ServiceException("活动已结束");
         }
 
-        // 统计当前活动已报名人数
-        BizRegistration countParams = new BizRegistration();
-        countParams.setActivityId(bizRegistration.getActivityId());
-        List<BizRegistration> currentList = bizRegistrationMapper.selectBizRegistrationList(countParams);
-
-        // 假设 maxPeople 为 0 或 null 代表不限人数
-        if (activity.getMaxPeople() != null && activity.getMaxPeople() > 0) {
-            if (currentList.size() >= activity.getMaxPeople()) {
-                throw new ServiceException("很抱歉，该活动名额已满！");
-            }
+        // 查重
+        BizRegistration query = new BizRegistration();
+        query.setActivityId(activityId);
+        query.setUserId(userId);
+        List<BizRegistration> list = bizRegistrationMapper.selectBizRegistrationList(query);
+        if (list.size() > 0) {
+            throw new ServiceException("请勿重复报名");
         }
 
+        BizRegistration reg = new BizRegistration();
+        reg.setActivityId(activityId);
+        reg.setUserId(userId);
+        reg.setUserName(username);
+        reg.setDeptName(deptName);
+        reg.setStatus("0"); // 0-已报名
+        reg.setCreateTime(DateUtils.getNowDate());
+
+        return bizRegistrationMapper.insertBizRegistration(reg);
+    }
+
+    // 核心签到逻辑
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void checkInActivity(Long activityId, String code) {
+        Long userId = SecurityUtils.getUserId();
+
+        // 修改点：使用 selectBizActivityById
+        BizActivity activity = bizActivityMapper.selectBizActivityByActivityId(activityId);
+
+        if (activity == null) {
+            throw new ServiceException("活动不存在");
+        }
+
+        if (StringUtils.isEmpty(code) || !code.equals(activity.getCheckinCode())) {
+            throw new ServiceException("签到码错误");
+        }
+
+        BizRegistration query = new BizRegistration();
+        query.setActivityId(activityId);
+        query.setUserId(userId);
+        List<BizRegistration> list = bizRegistrationMapper.selectBizRegistrationList(query);
+
+        if (list.isEmpty()) {
+            throw new ServiceException("未报名，无法签到");
+        }
+
+        BizRegistration reg = list.get(0);
+        if ("1".equals(reg.getStatus())) {
+            throw new ServiceException("您已签到，无需重复");
+        }
+
+        reg.setStatus("1"); // 1-已签到
+        reg.setCheckinTime(DateUtils.getNowDate());
+        bizRegistrationMapper.updateBizRegistration(reg);
+    }
+
+    @Override
+    public List<Map<String, Object>> getDeptStatistics() {
+        return bizRegistrationMapper.selectDeptStatistics();
+    }
+
+    // 基础CRUD实现
+    @Override
+    public int insertBizRegistration(BizRegistration bizRegistration) {
+        bizRegistration.setCreateTime(DateUtils.getNowDate());
         return bizRegistrationMapper.insertBizRegistration(bizRegistration);
     }
 
-    /**
-     * 修改报名记录
-     */
     @Override
-    public int updateBizRegistration(BizRegistration bizRegistration)
-    {
+    public int updateBizRegistration(BizRegistration bizRegistration) {
         return bizRegistrationMapper.updateBizRegistration(bizRegistration);
     }
 
-    /**
-     * 批量删除报名记录
-     */
     @Override
-    public int deleteBizRegistrationByRegIds(Long[] regIds)
-    {
+    public int deleteBizRegistrationByRegIds(Long[] regIds) {
         return bizRegistrationMapper.deleteBizRegistrationByRegIds(regIds);
     }
 
     @Override
-    public List<Map<String, Object>> selectDeptStats() {
-        return bizRegistrationMapper.selectDeptStats();
-    }
-
-    @Override
-    public List<Map<String, Object>> selectActivityStats() {
-        return bizRegistrationMapper.selectActivityStats();
+    public int deleteBizRegistrationByRegId(Long regId) {
+        return bizRegistrationMapper.deleteBizRegistrationByRegId(regId);
     }
 }
