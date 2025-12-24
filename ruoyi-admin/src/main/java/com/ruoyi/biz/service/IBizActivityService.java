@@ -1,63 +1,34 @@
 package com.ruoyi.biz.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.ruoyi.biz.domain.entity.BizActivity;
+import com.ruoyi.biz.domain.dto.ActivityStatsDTO; // 需自行定义DTO
+
 import java.util.List;
-import com.ruoyi.biz.domain.BizActivity;
 
-/**
- * 学术讲座Service接口
- * 
- * @author ruoyi
- * @date 2025-12-17
- */
-public interface IBizActivityService 
-{
+public interface IBizActivityService extends IService<BizActivity> {
     /**
-     * 查询学术讲座
-     * 
-     * @param activityId 学术讲座主键
-     * @return 学术讲座
+     * 发布活动申请
      */
-    public BizActivity selectBizActivityByActivityId(Long activityId);
+    boolean submitActivity(BizActivity activity);
 
     /**
-     * 查询学术讲座列表
-     * 
-     * @param bizActivity 学术讲座
-     * @return 学术讲座集合
+     * 审核活动
      */
-    public List<BizActivity> selectBizActivityList(BizActivity bizActivity);
+    boolean auditActivity(Long activityId, String status, String comment);
 
     /**
-     * 新增学术讲座
-     * 
-     * @param bizActivity 学术讲座
-     * @return 结果
+     * 生成动态签到码
      */
-    public int insertBizActivity(BizActivity bizActivity);
+    String generateCheckinCode(Long activityId);
 
     /**
-     * 修改学术讲座
-     * 
-     * @param bizActivity 学术讲座
-     * @return 结果
+     * 刷新过期状态
      */
-    public int updateBizActivity(BizActivity bizActivity);
+    void refreshActivityStatus();
 
     /**
-     * 批量删除学术讲座
-     * 
-     * @param activityIds 需要删除的学术讲座主键集合
-     * @return 结果
+     * 获取学科活跃度排名
      */
-    public int deleteBizActivityByActivityIds(Long[] activityIds);
-
-    /**
-     * 删除学术讲座信息
-     * 
-     * @param activityId 学术讲座主键
-     * @return 结果
-     */
-    public int deleteBizActivityByActivityId(Long activityId);
-
-
+    List<ActivityStatsDTO> getSubjectRank();
 }

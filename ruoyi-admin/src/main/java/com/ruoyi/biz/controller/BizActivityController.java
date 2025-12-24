@@ -1,137 +1,183 @@
-package com.ruoyi.biz.controller; // 或者是 package com.ruoyi.biz.controller; 取决于你的目录
+package com.ruoyi.biz.controller;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import javax.servlet.http.HttpServletResponse;
-
-import com.ruoyi.biz.domain.BizRegistration;
-import com.ruoyi.biz.mapper.BizActivityMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ruoyi.biz.domain.entity.BizActivity;
+import com.ruoyi.biz.domain.entity.BizRegistration;
+import com.ruoyi.biz.service.IBizActivityService;
 import com.ruoyi.biz.service.IBizRegistrationService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.enums.BusinessType;
-import com.ruoyi.biz.domain.BizActivity;
-import com.ruoyi.biz.service.IBizActivityService;
-import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.utils.DateUtils;
+import com.ruoyi.common.utils.PageUtils;
+import com.ruoyi.common.utils.SecurityUtils;
+import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.system.domain.SysNotice;
+import com.ruoyi.system.service.ISysNoticeService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
 
 /**
  * 活动管理 Controller
  */
 @RestController
-// 关键点：这里的路径必须和前端 api.js 里的 url 对应
 @RequestMapping("/biz/activity")
+@RequiredArgsConstructor
 public class BizActivityController extends BaseController {
-    @Autowired
-    private IBizActivityService bizActivityService;
 
-
-    // 【新增】注入报名服务，为了统计人数
-    @Autowired
-    private IBizRegistrationService bizRegistrationService;
-
-    // 【新增】注入Mapper，为了查图表
-    @Autowired
-    private BizActivityMapper bizActivityMapper;
+    private final IBizActivityService activityService;
+    private final IBizRegistrationService registrationService; // 新增注入
+    private final ISysNoticeService noticeService; // 新增注入
 
 
     /**
-     * 查询活动列表
+     * 查询全校活动资源池
      */
-    // @PreAuthorize("@ss.hasPermi('biz:activity:list')") // 如果你配置了权限字符，可以开启这个
     @GetMapping("/list")
-    public TableDataInfo list(BizActivity bizActivity) {
-        startPage();
-        List<BizActivity> list = bizActivityService.selectBizActivityList(bizActivity);
-        return getDataTable(list);
+    public TableDataInfo list(BizActivity activity) {
+        // 1. 构建分页对象 (自动获取前端传递的 pageNum, pageSize)
+        Page<BizActivity> page = PageUtils.buildPage();
+
+        // 2. 构建查询条件
+        LambdaQueryWrapper<BizActivity> query = new LambdaQueryWrapper<>();
+        query.like(StringUtils.isNotBlank(activity.getTitle()), BizActivity::getTitle, activity.getTitle())
+                .eq(StringUtils.isNotBlank(activity.getActivityType()), BizActivity::getActivityType, activity.getActivityType())
+                // 如果有时间筛选
+                .ge(activity.getStartTime() != null, BizActivity::getStartTime, activity.getStartTime())
+                // 默认排序：创建时间倒序
+                .orderByDesc(BizActivity::getCreateTime);
+
+        // 3. 执行查询
+        activityService.page(page, query);
+
+        // 4. 返回结果 (适配我们修改后的 getDataTable)
+        return getDataTable(page);
     }
 
     /**
-     * 获取活动详细信息
+     * 发布活动
      */
-    @GetMapping(value = "/{activityId}")
-    public AjaxResult getInfo(@PathVariable("activityId") Long activityId) {
-        return AjaxResult.success(bizActivityService.selectBizActivityByActivityId(activityId));
-    }
-
-    /**
-     * 新增活动
-     */
-    @Log(title = "活动管理", businessType = BusinessType.INSERT)
+    @PreAuthorize("@ss.hasPermi('biz:activity:add')")
     @PostMapping
-    public AjaxResult add(@RequestBody BizActivity bizActivity) {
-        return toAjax(bizActivityService.insertBizActivity(bizActivity));
+    public AjaxResult add(@RequestBody BizActivity activity) {
+        activity.setCreateBy(getUsername());
+        // 调用之前 Service 实现的 submitActivity
+        return toAjax(activityService.submitActivity(activity));
     }
 
     /**
      * 修改活动
      */
-    @Log(title = "活动管理", businessType = BusinessType.UPDATE)
+    @PreAuthorize("@ss.hasPermi('biz:activity:edit')")
     @PutMapping
-    public AjaxResult edit(@RequestBody BizActivity bizActivity) {
-        return toAjax(bizActivityService.updateBizActivity(bizActivity));
+    public AjaxResult edit(@RequestBody BizActivity activity) {
+        return toAjax(activityService.updateById(activity));
     }
 
     /**
      * 删除活动
      */
-    @Log(title = "活动管理", businessType = BusinessType.DELETE)
-    @DeleteMapping("/{activityIds}")
-    public AjaxResult remove(@PathVariable Long[] activityIds) {
-        return toAjax(bizActivityService.deleteBizActivityByActivityIds(activityIds));
+    @PreAuthorize("@ss.hasPermi('biz:activity:remove')")
+    @DeleteMapping("/{ids}")
+    public AjaxResult remove(@PathVariable Long[] ids) {
+        return toAjax(activityService.removeBatchByIds(Arrays.asList(ids)));
     }
+
+    /**
+     * 获取详情
+     */
+    @GetMapping(value = "/{id}")
+    public AjaxResult getInfo(@PathVariable("id") Long id) {
+        return success(activityService.getById(id));
+    }
+
+    /**
+     * 生成签到二维码 (管理员/主讲人)
+     */
+    @GetMapping("/qrcode/{id}")
+    public AjaxResult getQrCode(@PathVariable Long id) {
+        return AjaxResult.success("生成成功", activityService.generateCheckinCode(id));
+    }
+
 
 
     /**
-     * 获取首页统计数据
+     * [新增] 获取首页综合数据（核心指标 + 最新公告 + 图表数据）
      */
-    @GetMapping("/stats")
-    public AjaxResult getStats() {
-        AjaxResult ajax = AjaxResult.success();
+    @GetMapping("/index-data")
+    public AjaxResult getIndexData() {
+        Map<String, Object> data = new HashMap<>();
+        Long userId = SecurityUtils.getUserId();
 
-        // 1. 统计活动总数
-        List<BizActivity> activities = bizActivityService.selectBizActivityList(new BizActivity());
-        ajax.put("activityCount", activities.size());
+        // 1. 核心指标统计
+        // (1) 全校活动总数 (已发布)
+        long totalActivity = activityService.count(new LambdaQueryWrapper<BizActivity>()
+                .eq(BizActivity::getStatus, "1"));
+        data.put("totalActivity", totalActivity);
 
-        // 2. 统计报名数据
-        List<BizRegistration> regs = bizRegistrationService.selectBizRegistrationList(new BizRegistration());
-        ajax.put("regCount", regs.size());
+        // (2) 本周即将开始 (未来7天)
+        Date now = new Date();
+        Date nextWeek = DateUtils.addDays(now, 7);
+        long weekActivity = activityService.count(new LambdaQueryWrapper<BizActivity>()
+                .eq(BizActivity::getStatus, "1")
+                .between(BizActivity::getStartTime, now, nextWeek));
+        data.put("weekActivity", weekActivity);
 
-        // 3. 统计签到人数 (过滤 status = '2' 已签到)
-        long checkinCount = regs.stream().filter(r -> "2".equals(r.getStatus())).count();
-        ajax.put("checkinCount", checkinCount);
+        // (3) 累计参与人次 (所有报名成功的)
+        long totalPeople = registrationService.count(new LambdaQueryWrapper<BizRegistration>()
+                .in(BizRegistration::getStatus, "0", "2")); // 已报名或已签到
+        data.put("totalPeople", totalPeople);
 
-        // 4. 统计待审核/其他 (这里演示过滤 status = '0' 待审核)
-        long auditCount = regs.stream().filter(r -> "0".equals(r.getStatus())).count();
-        ajax.put("auditCount", auditCount);
+        // (4) 我的报名记录
+        long myReg = registrationService.count(new LambdaQueryWrapper<BizRegistration>()
+                .eq(BizRegistration::getUserId, userId));
+        data.put("myReg", myReg);
 
-        // 5. 图表数据：热门活动 Top 5
-        List<Map<String, Object>> chartData = bizActivityMapper.selectActivityStats();
+        // 2. 最新公告 (取前5条)
+        SysNotice noticeQuery = new SysNotice();
+        noticeQuery.setStatus("0"); // 正常状态
+        PageUtils.startPage(); // 开启分页
+        List<SysNotice> notices = noticeService.selectNoticeList(noticeQuery);
+        // PageHelper会自动拦截第一条查询，所以这里手动清除可能的副作用并只取前5
+        if (notices.size() > 5) notices = notices.subList(0, 5);
+        data.put("notices", notices);
 
-        // 处理一下数据格式，把 title 和 count 分开，方便前端 ECharts 使用
-        List<String> chartX = new ArrayList<>();
-        List<Long> chartY = new ArrayList<>();
-        for (Map<String, Object> map : chartData) {
-            chartX.add(map.get("title").toString());
-            chartY.add((Long) map.get("count"));
-        }
-        ajax.put("chartX", chartX);
-        ajax.put("chartY", chartY);
-
-        return ajax;
+        return success(data);
     }
+
+
+
+
+    /**
+     * 获取数据大屏统计信息
+     */
+    @GetMapping("/statistics")
+    public AjaxResult getStatistics() {
+        // 这里暂时返回模拟数据，确保前端图表能展示
+        // 后续可以在 Service 层实现真实的数据库聚合查询
+        Map<String, Object> data = new HashMap<>();
+
+        // 模拟学科排名数据
+        data.put("rankData", Arrays.asList(120, 200, 150, 80, 70));
+        data.put("rankCategories", Arrays.asList("计算机", "经管", "人文", "建筑", "艺术"));
+
+        // 模拟活动类型占比
+        List<Map<String, Object>> pieData = new ArrayList<>();
+        Map<String, Object> item1 = new HashMap<>(); item1.put("value", 1048); item1.put("name", "学术讲座");
+        Map<String, Object> item2 = new HashMap<>(); item2.put("value", 735); item2.put("name", "校园活动");
+        Map<String, Object> item3 = new HashMap<>(); item3.put("value", 580); item3.put("name", "社团竞赛");
+        pieData.add(item1);
+        pieData.add(item2);
+        pieData.add(item3);
+        data.put("pieData", pieData);
+
+        return success(data);
+    }
+
 
 
 

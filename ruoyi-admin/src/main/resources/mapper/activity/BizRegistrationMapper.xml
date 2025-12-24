@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.biz.mapper.BizRegistrationMapper">
 
-    <resultMap type="com.ruoyi.biz.domain.BizRegistration" id="BizRegistrationResult">
+    <resultMap type="com.ruoyi.biz.domain.entity.BizRegistration" id="BizRegistrationResult">
         <id     property="regId"       column="reg_id"        />
         <result property="activityId"  column="activity_id"   />
         <result property="userId"      column="user_id"       />
@@ -23,7 +23,7 @@
         from biz_registration
     </sql>
 
-    <select id="selectBizRegistrationList" parameterType="com.ruoyi.biz.domain.BizRegistration" resultMap="BizRegistrationResult">
+    <select id="selectBizRegistrationList" parameterType="com.ruoyi.biz.domain.entity.BizRegistration" resultMap="BizRegistrationResult">
         <include refid="selectBizRegistrationVo"/>
         <where>
             <if test="activityId != null "> and activity_id = #{activityId}</if>
@@ -39,7 +39,7 @@
         where reg_id = #{regId}
     </select>
 
-    <insert id="insertBizRegistration" parameterType="com.ruoyi.biz.domain.BizRegistration" useGeneratedKeys="true" keyProperty="regId">
+    <insert id="insertBizRegistration" parameterType="com.ruoyi.biz.domain.entity.BizRegistration" useGeneratedKeys="true" keyProperty="regId">
         insert into biz_registration
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="activityId != null">activity_id,</if>
@@ -67,7 +67,7 @@
         </trim>
     </insert>
 
-    <update id="updateBizRegistration" parameterType="com.ruoyi.biz.domain.BizRegistration">
+    <update id="updateBizRegistration" parameterType="com.ruoyi.biz.domain.entity.BizRegistration">
         update biz_registration
         <trim prefix="SET" suffixOverrides=",">
             <if test="activityId != null">activity_id = #{activityId},</if>

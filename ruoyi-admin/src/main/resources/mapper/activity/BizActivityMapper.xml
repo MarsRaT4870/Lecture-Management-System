@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.biz.mapper.BizActivityMapper">
 
-    <resultMap type="com.ruoyi.biz.domain.BizActivity" id="BizActivityResult">
+    <resultMap type="com.ruoyi.biz.domain.entity.BizActivity" id="BizActivityResult">
         <id property="activityId" column="activity_id" />
         <result property="title"    column="title"    />
         <result property="description"    column="description"    />
@@ -32,7 +32,7 @@
         from biz_activity
     </sql>
 
-    <select id="selectBizActivityList" parameterType="com.ruoyi.biz.domain.BizActivity" resultMap="BizActivityResult">
+    <select id="selectBizActivityList" parameterType="com.ruoyi.biz.domain.entity.BizActivity" resultMap="BizActivityResult">
         <include refid="selectBizActivityVo"/>
         <where>
             <if test="title != null  and title != ''"> and title = #{title}</if>
@@ -55,7 +55,7 @@
         where activity_id = #{activityId}
     </select>
 
-    <insert id="insertBizActivity" parameterType="com.ruoyi.biz.domain.BizActivity" useGeneratedKeys="true" keyProperty="activityId">
+    <insert id="insertBizActivity" parameterType="com.ruoyi.biz.domain.entity.BizActivity" useGeneratedKeys="true" keyProperty="activityId">
         insert into biz_activity
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="title != null">title,</if>
@@ -97,7 +97,7 @@
         </trim>
     </insert>
 
-    <update id="updateBizActivity" parameterType="com.ruoyi.biz.domain.BizActivity">
+    <update id="updateBizActivity" parameterType="com.ruoyi.biz.domain.entity.BizActivity">
         update biz_activity
         <trim prefix="SET" suffixOverrides=",">
             <if test="title != null">title = #{title},</if>
