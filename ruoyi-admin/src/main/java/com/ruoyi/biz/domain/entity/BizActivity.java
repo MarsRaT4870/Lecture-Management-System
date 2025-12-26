@@ -75,4 +75,7 @@ public class BizActivity extends BaseEntity {
     /** 场地ID (关联 BizVenue) */
     private Long venueId;
 
+    /** 大厅可见性 (1=显示, 0=隐藏) */
+    private String visible;
+
 }

@@ -204,4 +204,21 @@ public class BizActivityController extends BaseController {
     }
 
 
+    /**
+     * 手动下架活动（归档）
+     */
+    @PreAuthorize("@ss.hasPermi('biz:activity:remove')") // 复用删除权限，或者新增 biz:activity:archive
+    @Log(title = "活动下架", businessType = BusinessType.UPDATE)
+    @PutMapping("/archive/{activityId}")
+    public AjaxResult archive(@PathVariable Long activityId)
+    {
+        // 既然是在 ServiceImpl 里新加的方法，这里需要强转或者在接口加定义
+        // 为了方便，我们在 ServiceImpl 里写了 archiveActivity，这里直接调用
+        // 注意：你需要确保 BizActivityServiceImpl 被注入为 bean
+        // 建议在 IBizActivityService 接口中也加上 boolean archiveActivity(Long id);
+        // 这里假设你已经加了，或者直接转换：
+        return toAjax(((com.ruoyi.biz.service.impl.BizActivityServiceImpl)activityService).archiveActivity(activityId));
+    }
+
+
 }

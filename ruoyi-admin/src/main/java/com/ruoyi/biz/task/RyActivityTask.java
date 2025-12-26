@@ -91,4 +91,35 @@ public class RyActivityTask {
             }
         }
     }
+
+
+
+    /**
+     * 任务3：自动下架已结束超过7天的活动
+     */
+    public void autoArchiveActivity() {
+        System.out.println("-----------执行定时任务：清理过期活动-----------");
+        // 当前时间 - 7天
+        long sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000);
+        Date limitDate = new Date(sevenDaysAgo);
+
+        // 更新条件：状态=已结束(2) AND 结束时间 < 7天前 AND 可见性=显示(1)
+        boolean result = activityService.update(new LambdaUpdateWrapper<BizActivity>()
+                .eq(BizActivity::getStatus, "2")
+                .eq(BizActivity::getVisible, "1")
+                .lt(BizActivity::getEndTime, limitDate)
+                .set(BizActivity::getVisible, "0")); // 设置为不可见
+
+        if(result) {
+            System.out.println(">>> 成功将过期一周的活动从大厅下架");
+        }
+    }
+
+
+
+
+
+
+
+
 }

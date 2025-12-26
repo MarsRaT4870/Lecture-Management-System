@@ -28,7 +28,7 @@ public class BizRegistrationServiceImpl extends ServiceImpl<BizRegistrationMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String register(Long activityId) {
-// 1. 校验活动状态
+        // 1. 校验活动状态
         BizActivity activity = activityService.getById(activityId);
         if (activity == null || !"1".equals(activity.getStatus())) {
             throw new ServiceException("活动不存在或未发布");
