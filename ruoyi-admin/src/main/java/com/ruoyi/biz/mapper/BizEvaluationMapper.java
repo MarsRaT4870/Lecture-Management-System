@@ -1,7 +1,7 @@
 package com.ruoyi.biz.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.ruoyi.biz.domain.BizEvaluation;
+import com.ruoyi.biz.domain.entity.BizEvaluation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 

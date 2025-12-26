@@ -1,7 +1,7 @@
 package com.ruoyi.biz.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.ruoyi.biz.domain.BizMessage;
+import com.ruoyi.biz.domain.entity.BizMessage;
 
 public interface IBizMessageService extends IService<BizMessage> {
     // 发送消息工具方法

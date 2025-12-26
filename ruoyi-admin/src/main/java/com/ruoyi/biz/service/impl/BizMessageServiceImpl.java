@@ -2,7 +2,7 @@ package com.ruoyi.biz.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ruoyi.biz.domain.BizMessage;
+import com.ruoyi.biz.domain.entity.BizMessage;
 import com.ruoyi.biz.mapper.BizMessageMapper;
 import com.ruoyi.biz.service.IBizMessageService;
 import org.springframework.stereotype.Service;

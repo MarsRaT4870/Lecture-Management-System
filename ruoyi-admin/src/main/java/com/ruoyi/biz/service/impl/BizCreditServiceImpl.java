@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.biz.domain.entity.BizActivity;
 import com.ruoyi.biz.domain.entity.BizRegistration;
 // 这里的 BizCredit 是新模块，通常还在 domain 包下，如果报错请改为 domain.entity
-import com.ruoyi.biz.domain.BizCredit;
+import com.ruoyi.biz.domain.entity.BizCredit;
 
 import com.ruoyi.biz.mapper.BizActivityMapper;
 import com.ruoyi.biz.mapper.BizCreditMapper;
