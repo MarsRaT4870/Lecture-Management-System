@@ -6,9 +6,11 @@ import com.ruoyi.biz.domain.entity.BizActivity;
 import com.ruoyi.biz.domain.entity.BizRegistration;
 import com.ruoyi.biz.service.IBizActivityService;
 import com.ruoyi.biz.service.IBizRegistrationService;
+import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.PageUtils;
 import com.ruoyi.common.utils.SecurityUtils;
@@ -32,6 +34,7 @@ public class BizActivityController extends BaseController {
     private final IBizActivityService activityService;
     private final IBizRegistrationService registrationService; // 新增注入
     private final ISysNoticeService noticeService; // 新增注入
+
 
 
     /**
@@ -104,7 +107,6 @@ public class BizActivityController extends BaseController {
     }
 
 
-
     /**
      * [新增] 获取首页综合数据（核心指标 + 最新公告 + 图表数据）
      */
@@ -150,8 +152,6 @@ public class BizActivityController extends BaseController {
     }
 
 
-
-
     /**
      * 获取数据大屏统计信息
      */
@@ -167,9 +167,15 @@ public class BizActivityController extends BaseController {
 
         // 模拟活动类型占比
         List<Map<String, Object>> pieData = new ArrayList<>();
-        Map<String, Object> item1 = new HashMap<>(); item1.put("value", 1048); item1.put("name", "学术讲座");
-        Map<String, Object> item2 = new HashMap<>(); item2.put("value", 735); item2.put("name", "校园活动");
-        Map<String, Object> item3 = new HashMap<>(); item3.put("value", 580); item3.put("name", "社团竞赛");
+        Map<String, Object> item1 = new HashMap<>();
+        item1.put("value", 1048);
+        item1.put("name", "学术讲座");
+        Map<String, Object> item2 = new HashMap<>();
+        item2.put("value", 735);
+        item2.put("name", "校园活动");
+        Map<String, Object> item3 = new HashMap<>();
+        item3.put("value", 580);
+        item3.put("name", "社团竞赛");
         pieData.add(item1);
         pieData.add(item2);
         pieData.add(item3);
@@ -179,6 +185,23 @@ public class BizActivityController extends BaseController {
     }
 
 
+    /**
+     * 审核活动
+     */
+    @PreAuthorize("@ss.hasPermi('biz:activity:audit')") // 只有拥有审核权限的人能调
+    @Log(title = "活动审核", businessType = BusinessType.UPDATE)
+    @PutMapping("/audit")
+    public AjaxResult audit(@RequestBody BizActivity activity) {
+        // 前端传过来: activityId, auditStatus, remark(审核意见)
+        if (activity.getActivityId() == null || activity.getAuditStatus() == null) {
+            return error("参数不完整");
+        }
+        return toAjax(activityService.auditActivity(
+                activity.getActivityId(),
+                activity.getAuditStatus(),
+                activity.getRemark()
+        ));
+    }
 
 
 }

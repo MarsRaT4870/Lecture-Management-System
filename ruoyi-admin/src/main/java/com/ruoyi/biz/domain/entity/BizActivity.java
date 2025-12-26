@@ -71,4 +71,8 @@ public class BizActivity extends BaseEntity {
     @TableLogic
     @TableField("del_flag")
     private String delFlag;
+
+    /** 场地ID (关联 BizVenue) */
+    private Long venueId;
+
 }

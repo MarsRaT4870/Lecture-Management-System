@@ -1,14 +1,42 @@
 package com.ruoyi.biz.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.ruoyi.biz.domain.dto.ActivityStatsDTO;
 import com.ruoyi.biz.domain.entity.BizActivity;
-import com.ruoyi.biz.domain.dto.ActivityStatsDTO; // 需自行定义DTO
-
 import java.util.List;
 
+/**
+ * 活动管理 Service 接口
+ */
 public interface IBizActivityService extends IService<BizActivity> {
+
     /**
-     * 发布活动申请
+     * 查询活动列表
+     */
+    List<BizActivity> selectBizActivityList(BizActivity bizActivity);
+
+    /**
+     * 查询活动详细
+     */
+    BizActivity selectBizActivityByActivityId(Long activityId);
+
+    /**
+     * 新增活动
+     */
+    int insertBizActivity(BizActivity bizActivity);
+
+    /**
+     * 修改活动
+     */
+    int updateBizActivity(BizActivity bizActivity);
+
+    /**
+     * 批量删除活动
+     */
+    int deleteBizActivityByActivityIds(Long[] activityIds);
+
+    /**
+     * 提交活动 (业务方法)
      */
     boolean submitActivity(BizActivity activity);
 
@@ -18,17 +46,17 @@ public interface IBizActivityService extends IService<BizActivity> {
     boolean auditActivity(Long activityId, String status, String comment);
 
     /**
-     * 生成动态签到码
+     * 生成签到码
      */
     String generateCheckinCode(Long activityId);
 
     /**
-     * 刷新过期状态
+     * 刷新活动状态
      */
     void refreshActivityStatus();
 
     /**
-     * 获取学科活跃度排名
+     * 获取学科排行
      */
     List<ActivityStatsDTO> getSubjectRank();
 }
