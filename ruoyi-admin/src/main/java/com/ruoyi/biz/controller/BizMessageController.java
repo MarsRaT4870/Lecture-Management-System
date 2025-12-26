@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
-import com.ruoyi.biz.domain.BizMessage;
+import com.ruoyi.biz.domain.entity.BizMessage;
 import com.ruoyi.biz.service.IBizMessageService;
 
 @RestController
