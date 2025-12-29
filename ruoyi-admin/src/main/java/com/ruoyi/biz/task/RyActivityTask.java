@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ruoyi.biz.domain.entity.BizActivity;
 import com.ruoyi.biz.domain.entity.BizRegistration;
 import com.ruoyi.biz.service.IBizActivityService;
+import com.ruoyi.biz.service.IBizCreditService;
 import com.ruoyi.biz.service.IBizMessageService;
 import com.ruoyi.biz.service.IBizRegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class RyActivityTask {
     @Autowired
     private IBizMessageService messageService;
 
+    @Autowired
+    private IBizCreditService creditService;
+
     /**
      * 任务1：自动刷新活动状态
      * 将所有“已发布(1)”且“结束时间 < 当前时间”的活动，更新为“已结束(2)”
@@ -51,44 +55,100 @@ public class RyActivityTask {
     }
 
     /**
-     * 任务2：活动开始前提醒
+     * 任务2：活动开始前提醒（2小时前和1小时前）
      */
     public void remindUser() {
-        // 获取当前时间 + 1小时
-        long currentTime = System.currentTimeMillis();
-        long oneHourLater = currentTime + 60 * 60 * 1000;
+        Date now = new Date();
+        long currentTime = now.getTime();
+        
+        // 2小时后的时间范围（1.5小时到2.5小时之间）
+        long twoHoursLater = currentTime + 2L * 60 * 60 * 1000;
+        long twoHoursBefore = currentTime + (long)(1.5 * 60 * 60 * 1000);
+        
+        // 1小时后的时间范围（0.5小时到1.5小时之间）
+        long oneHourLater = currentTime + 1L * 60 * 60 * 1000;
+        long oneHourBefore = currentTime + (long)(0.5 * 60 * 60 * 1000);
 
-        // 1. 查找即将开始的活动
-        List<BizActivity> activities = activityService.list(new LambdaQueryWrapper<BizActivity>()
+        // 查找2小时内开始的活动
+        List<BizActivity> activities2h = activityService.list(new LambdaQueryWrapper<BizActivity>()
                 .eq(BizActivity::getStatus, "1")
-                .ge(BizActivity::getStartTime, new Date(currentTime))
+                .ge(BizActivity::getStartTime, new Date(twoHoursBefore))
+                .le(BizActivity::getStartTime, new Date(twoHoursLater))
+        );
+
+        // 查找1小时内开始的活动
+        List<BizActivity> activities1h = activityService.list(new LambdaQueryWrapper<BizActivity>()
+                .eq(BizActivity::getStatus, "1")
+                .ge(BizActivity::getStartTime, new Date(oneHourBefore))
                 .le(BizActivity::getStartTime, new Date(oneHourLater))
         );
 
-        if (activities.isEmpty()) return;
+        if (activities2h.isEmpty() && activities1h.isEmpty()) return;
 
         System.out.println("-----------执行定时任务：活动提醒-----------");
 
-        for (BizActivity act : activities) {
-            // 2. 查找该活动的报名用户 (且状态为0=已报名)
-            List<BizRegistration> users = registrationService.list(new LambdaQueryWrapper<BizRegistration>()
-                    .eq(BizRegistration::getActivityId, act.getActivityId())
-                    .eq(BizRegistration::getStatus, "0"));
+        // 发送2小时提醒
+        for (BizActivity act : activities2h) {
+            sendReminder(act, "2小时内");
+        }
 
-            for (BizRegistration user : users) {
-                // 3. 发送消息
-                try {
-                    messageService.sendMessage(
-                            user.getUserId(),
-                            user.getUserName(),
-                            "⏰ 活动即将开始提醒",
-                            "您报名的活动《" + act.getTitle() + "》将于 1 小时内开始，请前往 " + act.getLocation() + " 签到。",
-                            "2" // 活动通知
-                    );
-                } catch (Exception e) {
-                    System.err.println("发送提醒失败: " + e.getMessage());
-                }
+        // 发送1小时提醒
+        for (BizActivity act : activities1h) {
+            sendReminder(act, "1小时内");
+        }
+    }
+
+    /**
+     * 发送提醒消息
+     */
+    private void sendReminder(BizActivity act, String timeDesc) {
+        List<BizRegistration> users = registrationService.list(new LambdaQueryWrapper<BizRegistration>()
+                .eq(BizRegistration::getActivityId, act.getActivityId())
+                .in(BizRegistration::getStatus, "0", "1")); // 已报名和候补中
+
+        for (BizRegistration user : users) {
+            try {
+                messageService.sendMessage(
+                        user.getUserId(),
+                        user.getUserName(),
+                        "⏰ 活动即将开始提醒",
+                        "您报名的活动《" + act.getTitle() + "》将于 " + timeDesc + " 开始，请前往 " + act.getLocation() + " 签到。",
+                        "2" // 活动通知
+                );
+            } catch (Exception e) {
+                System.err.println("发送提醒失败: " + e.getMessage());
             }
+        }
+    }
+
+    /**
+     * 任务4：活动结束后自动发放学分
+     */
+    public void autoGrantCredits() {
+        System.out.println("-----------执行定时任务：自动发放学分-----------");
+        Date now = new Date();
+        
+        // 查找已结束但未发放学分的活动（结束时间在1小时内）
+        long oneHourAgo = now.getTime() - 60 * 60 * 1000;
+        List<BizActivity> finishedActivities = activityService.list(new LambdaQueryWrapper<BizActivity>()
+                .eq(BizActivity::getStatus, "2") // 已结束
+                .ge(BizActivity::getEndTime, new Date(oneHourAgo))
+                .le(BizActivity::getEndTime, now)
+        );
+
+        int totalGranted = 0;
+        for (BizActivity activity : finishedActivities) {
+            try {
+                int count = creditService.autoGrantCredits(activity.getActivityId());
+                totalGranted += count;
+                System.out.println(">>> 活动《" + activity.getTitle() + "》发放了 " + count + " 条学分记录");
+            } catch (Exception e) {
+                System.err.println("发放学分失败: " + e.getMessage());
+            }
+        }
+
+        if (totalGranted > 0) {
+            System.out.println(">>> 本次共发放 " + totalGranted + " 条学分记录");
         }
     }
 

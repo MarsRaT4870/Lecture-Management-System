@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 活动报名签到 Controller
@@ -136,5 +137,102 @@ public class BizRegistrationController extends BaseController {
     @DeleteMapping(value = "/{regIds}")
     public AjaxResult remove(@PathVariable Long[] regIds) {
         return toAjax(registrationService.removeBatchByIds(Arrays.asList(regIds)));
+    }
+
+    /**
+     * 提交评价反馈
+     */
+    @Log(title = "活动评价", businessType = BusinessType.UPDATE)
+    @PostMapping("/feedback")
+    public AjaxResult submitFeedback(@RequestBody BizRegistration bizRegistration) {
+        if (bizRegistration.getRegId() == null) {
+            return error("报名记录ID不能为空");
+        }
+        boolean success = registrationService.submitFeedback(
+                bizRegistration.getRegId(),
+                bizRegistration.getScoreContent(),
+                bizRegistration.getScoreSpeaker(),
+                bizRegistration.getScoreOrg(),
+                bizRegistration.getFeedback()
+        );
+        return success ? success("评价提交成功") : error("评价提交失败");
+    }
+
+    /**
+     * 取消报名
+     */
+    @Log(title = "取消报名", businessType = BusinessType.UPDATE)
+    @PostMapping("/cancel/{regId}")
+    public AjaxResult cancelRegistration(@PathVariable Long regId) {
+        boolean success = registrationService.cancelRegistration(regId);
+        return success ? success("取消报名成功") : error("取消报名失败");
+    }
+
+    /**
+     * 获取活动的评价统计（教师/管理员查看）
+     */
+    @PreAuthorize("@ss.hasPermi('biz:registration:query')")
+    @GetMapping("/feedback/stats/{activityId}")
+    public AjaxResult getFeedbackStats(@PathVariable Long activityId) {
+        // 统计该活动的平均评分
+        List<BizRegistration> list = registrationService.list(
+                new LambdaQueryWrapper<BizRegistration>()
+                        .eq(BizRegistration::getActivityId, activityId)
+                        .eq(BizRegistration::getStatus, "2") // 已签到
+                        .isNotNull(BizRegistration::getScoreContent) // 已评价
+        );
+
+        if (list.isEmpty()) {
+            return success(new java.util.HashMap<String, Object>() {{
+                put("avgContent", 0);
+                put("avgSpeaker", 0);
+                put("avgOrg", 0);
+                put("totalCount", 0);
+            }});
+        }
+
+        double avgContent = list.stream()
+                .filter(r -> r.getScoreContent() != null)
+                .mapToInt(BizRegistration::getScoreContent)
+                .average()
+                .orElse(0.0);
+
+        double avgSpeaker = list.stream()
+                .filter(r -> r.getScoreSpeaker() != null)
+                .mapToInt(BizRegistration::getScoreSpeaker)
+                .average()
+                .orElse(0.0);
+
+        double avgOrg = list.stream()
+                .filter(r -> r.getScoreOrg() != null)
+                .mapToInt(BizRegistration::getScoreOrg)
+                .average()
+                .orElse(0.0);
+
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        stats.put("avgContent", Math.round(avgContent * 100.0) / 100.0);
+        stats.put("avgSpeaker", Math.round(avgSpeaker * 100.0) / 100.0);
+        stats.put("avgOrg", Math.round(avgOrg * 100.0) / 100.0);
+        stats.put("totalCount", list.size());
+
+        return success(stats);
+    }
+
+    /**
+     * 人脸识别签到接口
+     */
+    @Log(title = "人脸识别签到", businessType = BusinessType.UPDATE)
+    @PostMapping("/checkin/face")
+    public AjaxResult checkinByFace(@RequestBody Map<String, Object> params) {
+        Long activityId = Long.valueOf(params.get("activityId").toString());
+        String faceImage = params.get("faceImage").toString(); // Base64编码的图片
+        
+        boolean success = registrationService.checkInByFace(
+                activityId,
+                SecurityUtils.getUserId(),
+                faceImage
+        );
+
+        return success ? success("人脸识别签到成功") : error("签到失败");
     }
 }

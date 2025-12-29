@@ -79,3 +79,102 @@ CREATE TABLE `biz_notification`
     PRIMARY KEY (`notify_id`),
     KEY           `idx_notify_user` (`user_id`,`status`)
 ) ENGINE=InnoDB COMMENT='系统通知表';
+
+-- ----------------------------
+-- 4. 场地资源表 (biz_venue) - 场地管理
+-- ----------------------------
+DROP TABLE IF EXISTS `biz_venue`;
+CREATE TABLE `biz_venue`
+(
+    `venue_id`    bigint       NOT NULL AUTO_INCREMENT COMMENT '场地ID',
+    `venue_name`  varchar(100) NOT NULL COMMENT '场地名称',
+    `location`    varchar(200) NOT NULL COMMENT '具体位置',
+    `capacity`    int          NOT NULL DEFAULT 0 COMMENT '容纳人数',
+    `status`      char(1)               DEFAULT '1' COMMENT '状态（1正常 0停用）',
+    `description` varchar(500)          DEFAULT NULL COMMENT '设施描述（投影仪/音响等）',
+    `del_flag`    char(1)               DEFAULT '0' COMMENT '删除标志',
+    `create_by`   varchar(64)           DEFAULT '' COMMENT '创建者',
+    `create_time` datetime               DEFAULT NULL COMMENT '创建时间',
+    `update_by`   varchar(64)           DEFAULT '' COMMENT '更新者',
+    `update_time` datetime               DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`venue_id`),
+    KEY           `idx_venue_status` (`status`)
+) ENGINE=InnoDB COMMENT='场地资源表';
+
+-- ----------------------------
+-- 5. 学分认证表 (biz_credit) - 第二课堂学分管理
+-- ----------------------------
+DROP TABLE IF EXISTS `biz_credit`;
+CREATE TABLE `biz_credit`
+(
+    `credit_id`     bigint       NOT NULL AUTO_INCREMENT COMMENT '学分记录ID',
+    `user_id`       bigint       NOT NULL COMMENT '用户ID',
+    `activity_id`   bigint       NOT NULL COMMENT '活动ID',
+    `credit_type`   char(1)      NOT NULL DEFAULT '1' COMMENT '学分类型（1学术讲座 2校园活动 3竞赛）',
+    `credit_value`  decimal(4,2) NOT NULL DEFAULT 0.00 COMMENT '学分值',
+    `certificate_no` varchar(50)          DEFAULT NULL COMMENT '证书编号',
+    `certificate_url` varchar(500)         DEFAULT NULL COMMENT '电子证书URL',
+    `status`        char(1)               DEFAULT '0' COMMENT '状态（0待审核 1已发放 2已撤销）',
+    `grant_time`    datetime              DEFAULT NULL COMMENT '发放时间',
+    `del_flag`      char(1)               DEFAULT '0' COMMENT '删除标志',
+    `create_by`     varchar(64)           DEFAULT '' COMMENT '创建者',
+    `create_time`   datetime              DEFAULT NULL COMMENT '创建时间',
+    `update_by`     varchar(64)           DEFAULT '' COMMENT '更新者',
+    `update_time`   datetime              DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`credit_id`),
+    KEY             `idx_credit_user` (`user_id`),
+    KEY             `idx_credit_activity` (`activity_id`)
+) ENGINE=InnoDB COMMENT='学分认证表';
+
+-- ----------------------------
+-- 6. 学分规则表 (biz_credit_rule) - 学分规则配置
+-- ----------------------------
+DROP TABLE IF EXISTS `biz_credit_rule`;
+CREATE TABLE `biz_credit_rule`
+(
+    `rule_id`      bigint       NOT NULL AUTO_INCREMENT COMMENT '规则ID',
+    `activity_type` char(1)     NOT NULL COMMENT '活动类型（1学术讲座 2校园活动 3竞赛）',
+    `credit_value` decimal(4,2) NOT NULL DEFAULT 0.00 COMMENT '学分值',
+    `rule_name`    varchar(100)          DEFAULT NULL COMMENT '规则名称',
+    `description` varchar(500)          DEFAULT NULL COMMENT '规则描述',
+    `status`       char(1)               DEFAULT '1' COMMENT '状态（1启用 0停用）',
+    `del_flag`     char(1)               DEFAULT '0' COMMENT '删除标志',
+    `create_by`    varchar(64)           DEFAULT '' COMMENT '创建者',
+    `create_time`  datetime              DEFAULT NULL COMMENT '创建时间',
+    `update_by`    varchar(64)           DEFAULT '' COMMENT '更新者',
+    `update_time`  datetime              DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`rule_id`),
+    KEY            `idx_rule_type` (`activity_type`)
+) ENGINE=InnoDB COMMENT='学分规则表';
+
+-- ----------------------------
+-- 7. 活动归档表 (biz_activity_archive) - 讲座归档与回放
+-- ----------------------------
+DROP TABLE IF EXISTS `biz_activity_archive`;
+CREATE TABLE `biz_activity_archive`
+(
+    `archive_id`    bigint       NOT NULL AUTO_INCREMENT COMMENT '归档ID',
+    `activity_id`   bigint       NOT NULL COMMENT '活动ID',
+    `ppt_url`       varchar(500)          DEFAULT NULL COMMENT 'PPT下载链接',
+    `video_url`     varchar(500)          DEFAULT NULL COMMENT '视频回放链接',
+    `photo_urls`    text                  DEFAULT NULL COMMENT '精彩瞬间照片（JSON数组）',
+    `summary`       text                  DEFAULT NULL COMMENT '活动总结',
+    `download_count` int                  DEFAULT 0 COMMENT '下载次数',
+    `view_count`    int                   DEFAULT 0 COMMENT '观看次数',
+    `del_flag`      char(1)               DEFAULT '0' COMMENT '删除标志',
+    `create_by`     varchar(64)           DEFAULT '' COMMENT '创建者',
+    `create_time`   datetime              DEFAULT NULL COMMENT '创建时间',
+    `update_by`     varchar(64)           DEFAULT '' COMMENT '更新者',
+    `update_time`   datetime              DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`archive_id`),
+    UNIQUE KEY      `uk_activity_archive` (`activity_id`),
+    KEY             `idx_archive_activity` (`activity_id`)
+) ENGINE=InnoDB COMMENT='活动归档表';
+
+-- ----------------------------
+-- 8. 修改活动表，增加场地ID和可见性字段
+-- ----------------------------
+ALTER TABLE `biz_activity` 
+ADD COLUMN `venue_id` bigint DEFAULT NULL COMMENT '场地ID' AFTER `location`,
+ADD COLUMN `visible` char(1) DEFAULT '1' COMMENT '大厅可见性（1显示 0隐藏）' AFTER `status`,
+ADD KEY `idx_activity_venue` (`venue_id`);

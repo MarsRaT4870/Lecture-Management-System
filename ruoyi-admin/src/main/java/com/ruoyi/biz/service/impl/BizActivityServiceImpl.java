@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -200,7 +201,41 @@ public class BizActivityServiceImpl extends ServiceImpl<BizActivityMapper, BizAc
 
     @Override
     public List<ActivityStatsDTO> getSubjectRank() {
-        return null;
+        // 这里简化实现：按申报主体统计活动数量
+        // 实际应该按学院/部门统计，需要关联用户表获取部门信息
+        List<ActivityStatsDTO> result = new ArrayList<>();
+        
+        // 统计各类型活动的发布数量
+        long lectureCount = this.count(new LambdaQueryWrapper<BizActivity>()
+                .eq(BizActivity::getActivityType, "1")
+                .eq(BizActivity::getStatus, "1"));
+        
+        long activityCount = this.count(new LambdaQueryWrapper<BizActivity>()
+                .eq(BizActivity::getActivityType, "2")
+                .eq(BizActivity::getStatus, "1"));
+        
+        // 统计参与人数（通过报名记录）
+        long lectureJoinCount = registrationMapper.selectCount(new LambdaQueryWrapper<BizRegistration>()
+                .in(BizRegistration::getStatus, "0", "2")
+                .exists("SELECT 1 FROM biz_activity a WHERE a.activity_id = biz_registration.activity_id AND a.activity_type = '1'"));
+        
+        long activityJoinCount = registrationMapper.selectCount(new LambdaQueryWrapper<BizRegistration>()
+                .in(BizRegistration::getStatus, "0", "2")
+                .exists("SELECT 1 FROM biz_activity a WHERE a.activity_id = biz_registration.activity_id AND a.activity_type = '2'"));
+        
+        ActivityStatsDTO dto1 = new ActivityStatsDTO();
+        dto1.setSubjectName("学术讲座");
+        dto1.setPublishCount((int) lectureCount);
+        dto1.setJoinCount((int) lectureJoinCount);
+        result.add(dto1);
+        
+        ActivityStatsDTO dto2 = new ActivityStatsDTO();
+        dto2.setSubjectName("校园活动");
+        dto2.setPublishCount((int) activityCount);
+        dto2.setJoinCount((int) activityJoinCount);
+        result.add(dto2);
+        
+        return result;
     }
 
     // ================== 私有辅助方法 ==================
