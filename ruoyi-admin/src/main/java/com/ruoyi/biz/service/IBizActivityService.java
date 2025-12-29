@@ -59,4 +59,8 @@ public interface IBizActivityService extends IService<BizActivity> {
      * 获取学科排行
      */
     List<ActivityStatsDTO> getSubjectRank();
+
+
+    // 【新增】手动归档/下架活动接口
+    boolean archiveActivity(Long activityId);
 }

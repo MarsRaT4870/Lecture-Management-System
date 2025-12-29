@@ -95,31 +95,29 @@ public class RyActivityTask {
 
 
     /**
-     * 任务3：自动下架已结束超过7天的活动
+     * 任务3：自动下架已结束超过 3 天的活动
+     * 逻辑：如果活动已结束(status=2) 且当前还显示(visible=1) 且 结束时间早于3天前 -> 设置为不显示(visible=0)
      */
     public void autoArchiveActivity() {
         System.out.println("-----------执行定时任务：清理过期活动-----------");
-        // 当前时间 - 7天
-        long sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000);
-        Date limitDate = new Date(sevenDaysAgo);
 
-        // 更新条件：状态=已结束(2) AND 结束时间 < 7天前 AND 可见性=显示(1)
+        // 【核心修改】当前时间 - 3天
+        long threeDaysAgo = System.currentTimeMillis() - (3L * 24 * 60 * 60 * 1000);
+        Date limitDate = new Date(threeDaysAgo);
+
+        // 更新条件：
+        // 1. 状态 = 已结束 (2)
+        // 2. 可见性 = 显示 (1) —— 保证手动下架的不会被重复处理
+        // 3. 结束时间 < 3天前
         boolean result = activityService.update(new LambdaUpdateWrapper<BizActivity>()
                 .eq(BizActivity::getStatus, "2")
                 .eq(BizActivity::getVisible, "1")
                 .lt(BizActivity::getEndTime, limitDate)
-                .set(BizActivity::getVisible, "0")); // 设置为不可见
+                .set(BizActivity::getVisible, "0")); // 动作：自动归档
 
         if(result) {
-            System.out.println(">>> 成功将过期一周的活动从大厅下架");
+            System.out.println(">>> 成功将结束超过3天的活动自动归档");
         }
     }
-
-
-
-
-
-
-
 
 }

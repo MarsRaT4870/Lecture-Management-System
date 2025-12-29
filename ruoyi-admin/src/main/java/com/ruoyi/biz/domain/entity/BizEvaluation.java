@@ -53,4 +53,34 @@ public class BizEvaluation implements Serializable {
      * 创建时间
      */
     private Date createTime;
+
+
+    /**
+     * 关联报名ID (核心校验)
+     */
+    private Long regId;
+
+    /**
+     * 内容分
+     */
+    private Integer scoreContent;
+    /**
+     * 讲师分
+     */
+    private Integer scoreSpeaker;
+    /**
+     * 环境分
+     */
+    private Integer scoreEnv;
+
+    /**
+     * 标签 JSON字符串
+     */
+    private String tags;
+
+    /**
+     * 官方回复
+     */
+    private String replyContent;
+
 }
